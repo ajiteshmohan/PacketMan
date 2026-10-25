@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.idea/
+.vscode/
+# measurement output (keep the folder, not your lab data)
+outputs/*
+!outputs/.gitkeep
+examples/**/figures/
