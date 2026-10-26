@@ -15,6 +15,7 @@ import json
 import math
 import socket
 import struct
+import sys
 import threading
 import time
 from datetime import datetime
@@ -22,7 +23,7 @@ from pathlib import Path
 
 import framing as fr
 import netem
-from schema import COLUMNS
+from schema import COLUMNS, save_rows_to_sqlite
 from scenarios import SCENARIOS, phase_index_at, phase_schedule
 from tcp_info import read_tcp_info
 from wifi_stats import RssiReader
@@ -95,15 +96,18 @@ class Flow:
         reader = fr.FrameReader(self.sock)
         while True:
             try:
-                ftype, payload = reader.read(None)
+                frame = reader.read(None)
+                if frame is None:
+                    continue
+                ftype, payload = frame
+                if ftype == fr.PING:
+                    _, ts = struct.unpack("!QQ", payload)
+                    with self.rtt_lock:
+                        self.rtts.append((time.perf_counter_ns() - ts) / 1e6)
+                elif ftype == fr.REPORT:
+                    self.goodput_kbps = json.loads(payload.decode())["goodput_kbps"]
             except (ConnectionError, OSError, ValueError):
                 return
-            if ftype == fr.PING:
-                _, ts = struct.unpack("!QQ", payload)
-                with self.rtt_lock:
-                    self.rtts.append((time.perf_counter_ns() - ts) / 1e6)
-            elif ftype == fr.REPORT:
-                self.goodput_kbps = json.loads(payload)["goodput_kbps"]
 
     def start(self):
         for fn in (self._sender, self._pinger, self._receiver):
@@ -172,11 +176,16 @@ def run_scenario(a, name, run_idx, rssi):
                 info = read_tcp_info(flow.sock)
                 ph = sched[phase_index_at(sched, max(0.0, tnow - t0 - a.interval / 2))][2]
                 row = dict.fromkeys(COLUMNS)
-                row.update(t_s=fmt(tnow - t0), scenario=name, run=run_idx,
-                           impairment=ph.kind if a.iface else "ambient",
-                           loss_target_pct=fmt(float(ph.loss_pct)) if a.iface else "",
-                           goodput_kbps=fmt(flow.goodput_kbps), app_rtt_ms=fmt(flow.drain_rtts()),
-                           rssi_dbm=fmt(rssi.read()))
+                row.update(
+                    t_s=fmt(tnow - t0),
+                    scenario=name,
+                    run=run_idx,
+                    impairment=ph.kind if a.iface else "ambient",
+                    loss_target_pct=fmt(float(ph.loss_pct)) if a.iface else "",
+                    goodput_kbps=fmt(flow.goodput_kbps),
+                    app_rtt_ms=fmt(flow.drain_rtts()),
+                    rssi_dbm=fmt(rssi.read())
+                )
                 if info and "bytes_acked" in info and "bytes_acked" in prev:
                     tp = (info["bytes_acked"] - prev["bytes_acked"]) * 8 / 1000 / dt
                 else:
@@ -188,12 +197,16 @@ def run_scenario(a, name, run_idx, rssi):
                     d_segs = info.get(seg_key, 0) - prev.get(seg_key, 0) if prev else 0
                     row.update(
                         delivery_kbps=fmt(info.get("delivery_rate", 0) * 8 / 1000.0),
-                        krtt_ms=fmt(info.get("rtt", 0) / 1000.0), cwnd=info.get("snd_cwnd"),
+                        krtt_ms=fmt(info.get("rtt", 0) / 1000.0),
+                        cwnd=info.get("snd_cwnd"),
                         ssthresh=info["snd_ssthresh"] if info.get("snd_ssthresh", 0) < 1_000_000 else "",
-                        ca_state=info.get("ca_state"), rto_ms=fmt(info.get("rto", 0) / 1000.0),
-                        rto_backoff=info.get("backoff"), retrans_delta=d_retx,
+                        ca_state=info.get("ca_state"),
+                        rto_ms=fmt(info.get("rto", 0) / 1000.0),
+                        rto_backoff=info.get("backoff"),
+                        retrans_delta=d_retx,
                         total_retrans=info.get("total_retrans"),
-                        loss_est_pct=fmt(100.0 * d_retx / d_segs) if d_segs > 0 else "")
+                        loss_est_pct=fmt(100.0 * d_retx / d_segs) if d_segs > 0 else ""
+                    )
                 w.writerow(row)
                 fh.flush()
                 rows.append(row)
@@ -204,13 +217,19 @@ def run_scenario(a, name, run_idx, rssi):
         if a.iface:
             netem.clear(a.iface)
         flow.finish()
+
+    if getattr(a, "sqlite", None):
+        save_rows_to_sqlite(a.sqlite, rows, source_file=path.name)
+
     return path, rows
 
 
 def summarize(name, rows):
     def vals(key):
         return [float(r[key]) for r in rows if r.get(key) not in (None, "")]
-    tp, rtt, retx = vals("throughput_kbps"), vals("krtt_ms") or vals("app_rtt_ms"), vals("retrans_delta")
+    tp = vals("throughput_kbps")
+    rtt = vals("krtt_ms") or vals("app_rtt_ms")
+    retx = vals("retrans_delta")
     mean = lambda v: sum(v) / len(v) if v else NAN
     print(f"  -> {name}: mean throughput {mean(tp):.0f} kbps | mean RTT {mean(rtt):.1f} ms | "
           f"retransmissions {sum(retx):.0f}")
@@ -233,6 +252,7 @@ def main(argv=None):
     ap.add_argument("--lowat", type=int, default=131072, help="TCP_NOTSENT_LOWAT bytes (0 = off)")
     ap.add_argument("--cooldown", type=float, default=3.0)
     ap.add_argument("--outdir", default="outputs")
+    ap.add_argument("--sqlite", default=None, help="optional SQLite database output path (e.g. outputs/experiments.db)")
     a = ap.parse_args(argv)
 
     names = [s.strip() for s in a.scenarios.split(",") if s.strip()]
@@ -253,9 +273,14 @@ def main(argv=None):
         for n in names:
             print(f"[client] scenario={n} run={r}/{a.repeats} duration={a.duration:g}s "
                   f"{'netem on ' + a.iface if a.iface else '(ambient loss)'}")
-            path, rows = run_scenario(a, n, r, rssi)
-            summarize(n, rows)
-            print(f"  log: {path}")
+            try:
+                path, rows = run_scenario(a, n, r, rssi)
+                summarize(n, rows)
+                print(f"  log: {path}")
+            except (ConnectionRefusedError, socket.timeout) as e:
+                print(f"  [ERROR] Connection failed to {a.host}:{a.port}: {e}")
+                print("          Please ensure server.py is running on PC-1 and the firewall allows port 5201.")
+                sys.exit(1)
             time.sleep(a.cooldown)
 
 

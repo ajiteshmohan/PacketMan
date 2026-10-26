@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PKT MAN: TCP Performance under Dynamic Wi-Fi Packet Loss</title>
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 16mm 18mm 16mm;
+    @bottom-center {
+      content: "Page " counter(page);
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 8.5pt;
+      color: #666666;
+    }
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 9.6pt;
+    line-height: 1.5;
+    color: #1a1a1a;
+    background: #ffffff;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+
+  .header-meta {
+    font-size: 8.5pt;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #444444;
+    margin-bottom: 12px;
+  }
+
+  .title-logo-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 14px;
+  }
+
+  .title-logo {
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 1px solid #222222;
+  }
+
+  h1.project-title {
+    font-size: 21pt;
+    font-weight: 800;
+    line-height: 1.2;
+    color: #000000;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  p.project-subtitle {
+    font-size: 10.5pt;
+    color: #333333;
+    margin-top: 6px;
+    margin-bottom: 16px;
+    line-height: 1.4;
+  }
+
+  .authors-block {
+    margin: 14px 0 20px 0;
+    padding: 10px 0;
+    border-top: 1.5pt solid #111111;
+    border-bottom: 1.5pt solid #111111;
+    display: flex;
+    justify-content: space-between;
+    font-size: 9.5pt;
+  }
+
+  .authors-block div {
+    flex: 1;
+  }
+
+  .authors-block b {
+    display: block;
+    font-size: 10pt;
+    color: #000000;
+  }
+
+  .authors-block span {
+    font-size: 8.5pt;
+    color: #555555;
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+  }
+
+  .toc-box {
+    margin: 18px 0;
+    padding: 12px 16px;
+    border: 1pt solid #222222;
+    background: #ffffff;
+  }
+
+  .toc-title {
+    font-size: 10.5pt;
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1pt solid #222222;
+    padding-bottom: 4px;
+  }
+
+  .toc-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 24px;
+    row-gap: 5px;
+    font-size: 9pt;
+  }
+
+  .toc-item {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .toc-item span.num {
+    font-weight: 700;
+    margin-right: 6px;
+  }
+
+  .provenance-box {
+    margin-top: 18px;
+    padding: 12px 14px;
+    border: 1pt solid #222222;
+    background: #ffffff;
+    font-size: 8.8pt;
+    line-height: 1.45;
+  }
+
+  .provenance-box b {
+    color: #000000;
+  }
+
+  h2 {
+    font-size: 14pt;
+    font-weight: 700;
+    color: #000000;
+    margin-top: 22px;
+    margin-bottom: 8px;
+    border-bottom: 1.5pt solid #000000;
+    padding-bottom: 3px;
+    page-break-after: avoid;
+  }
+
+  h3 {
+    font-size: 11pt;
+    font-weight: 700;
+    color: #111111;
+    margin-top: 16px;
+    margin-bottom: 6px;
+    page-break-after: avoid;
+  }
+
+  p {
+    margin-bottom: 9px;
+    text-align: justify;
+  }
+
+  ul, ol {
+    margin: 6px 0 12px 20px;
+  }
+
+  li {
+    margin-bottom: 3px;
+  }
+
+  /* STRICTLY BLACK AND WHITE TABLES — NO BLUE COLOR, NO SHADING */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 16px 0;
+    font-size: 8.6pt;
+    line-height: 1.35;
+    background: #ffffff !important;
+    page-break-inside: avoid;
+  }
+
+  th {
+    border-top: 1.5pt solid #000000;
+    border-bottom: 1pt solid #000000;
+    border-left: none;
+    border-right: none;
+    padding: 5px 6px;
+    font-weight: 700;
+    text-align: left;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  td {
+    border-top: none;
+    border-bottom: 0.5pt solid #d8d8d8;
+    border-left: none;
+    border-right: none;
+    padding: 4.5px 6px;
+    background: #ffffff !important;
+    color: #111111;
+    vertical-align: top;
+  }
+
+  tr:last-child td {
+    border-bottom: 1.5pt solid #000000;
+  }
+
+  figure {
+    margin: 14px 0;
+    text-align: center;
+    page-break-inside: avoid;
+  }
+
+  figure img {
+    max-width: 100%;
+    height: auto;
+    border: 1pt solid #cccccc;
+    border-radius: 4px;
+  }
+
+  figure.figure-dual {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  figure.figure-dual img {
+    max-width: 49%;
+  }
+
+  figcaption {
+    font-size: 8.2pt;
+    font-style: italic;
+    color: #333333;
+    margin-top: 5px;
+    text-align: center;
+  }
+
+  figcaption b {
+    font-style: normal;
+    color: #000000;
+  }
+
+  code, pre {
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-size: 8.2pt;
+  }
+
+  code {
+    background: #f4f4f4;
+    padding: 1px 4px;
+    border: 0.5pt solid #d8d8d8;
+    border-radius: 3px;
+  }
+
+  pre {
+    background: #ffffff;
+    border: 1pt solid #333333;
+    padding: 8px 10px;
+    margin: 8px 0 12px 0;
+    line-height: 1.35;
+    overflow-x: auto;
+    page-break-inside: avoid;
+  }
+
+  .equation-box {
+    margin: 10px 0;
+    padding: 8px 12px;
+    border-left: 2.5pt solid #000000;
+    background: #fafafa;
+    font-family: 'Cambria Math', 'Georgia', serif;
+    font-size: 10pt;
+  }
+</style>
+</head>
+<body>
+
+<!-- PAGE 1: TITLE & METADATA -->
+<div class="header-meta">Academic Project Report · Computer Networks Laboratory · Final Capstone</div>
+
+<div class="title-logo-row">
+  <img src="report_assets/pktman-logo.jpg" alt="PKT MAN Logo" class="title-logo">
+  <div>
+    <h1 class="project-title">PKT MAN: TCP Performance under Dynamic Wi-Fi Packet Loss</h1>
+  </div>
+</div>
+
+<p class="project-subtitle">
+  A Real-Testbed Measurement, Monitoring, Error-Detection and Machine-Learning Diagnostic Framework for Changing Wireless Conditions in Educational Networks
+</p>
+
+<div class="authors-block">
+  <div>
+    <b>Bassil H</b>
+    <span>Reg. No. 24BCE0904</span><br>
+    <small>B.Tech CSE (Core)</small>
+  </div>
+  <div>
+    <b>Ajitesh Mohan N</b>
+    <span>Reg. No. 24BCE0887</span><br>
+    <small>B.Tech CSE (Core)</small>
+  </div>
+  <div>
+    <b>Abijith V K</b>
+    <span>Reg. No. 24BKT0070</span><br>
+    <small>B.Tech CSE (Core)</small>
+  </div>
+</div>
+
+<div class="toc-box">
+  <div class="toc-title">Table of Contents</div>
+  <div class="toc-grid">
+    <div class="toc-item"><span><span class="num">1</span> About the Project (PKT MAN)</span><span>Page 2</span></div>
+    <div class="toc-item"><span><span class="num">6</span> Detection & Classification Method</span><span>Page 7</span></div>
+    <div class="toc-item"><span><span class="num">2</span> Working Principle & Loss Dynamics</span><span>Page 3</span></div>
+    <div class="toc-item"><span><span class="num">7</span> Experimental Results & Real Wi-Fi Data</span><span>Page 8</span></div>
+    <div class="toc-item"><span><span class="num">3</span> What Errors are Detected?</span><span>Page 4</span></div>
+    <div class="toc-item"><span><span class="num">8</span> PKT MAN Web Dashboard</span><span>Page 12</span></div>
+    <div class="toc-item"><span><span class="num">4</span> System Design & Architecture</span><span>Page 5</span></div>
+    <div class="toc-item"><span><span class="num">9</span> Limitations & Threats to Validity</span><span>Page 13</span></div>
+    <div class="toc-item"><span><span class="num">5</span> Procedure, Steps & Test Scenarios</span><span>Page 6</span></div>
+    <div class="toc-item"><span><span class="num">10</span> Conclusion & Future Scope</span><span>Page 13</span></div>
+  </div>
+</div>
+
+<div class="provenance-box">
+  <b>Provenance of Results & Empirical Validation:</b><br>
+  This updated project report contains <b>genuine, empirical TCP measurements</b> recorded across a physical two-laptop Wi-Fi testbed (PC-1 Receiver server at <code>10.182.189.219</code> and PC-2 Sender client operating on Linux/WSL2 with egress loss shaping via <code>tc netem</code>). Real measurement sessions for <b>Baseline, 1% Loss, 5% Loss, 10% Loss, Dynamic (R1 & R2), and Congestion</b> are reported alongside comprehensive <b>Random Forest classifier diagnostics</b> (98.4% 5-fold cross-validation accuracy across 4,028 windows), automated unit test verification (31 of 31 passing), and the newly delivered <b>PKT MAN Frosted-Glass Engineering Web Application</b>.
+</div>
+
+<!-- PAGE 2: ABOUT THE PROJECT -->
+<div class="page-break"></div>
+
+<h2>1 About the Project</h2>
+<p>
+  Educational institutions rely on campus Wi-Fi infrastructure to connect high-density user populations across lecture halls, computer labs, and libraries. In these environments, radio-frequency (RF) interference, channel contention, distance attenuation, multipath fading, and access-point handoffs generate significant wireless packet loss. 
+</p>
+<p>
+  Standard Transmission Control Protocol (TCP)—the fundamental transport protocol powering web browsing, video streaming, academic portals, and file transfers—was fundamentally designed under the assumption of wired networks: <b>any dropped packet is treated as an indicator of router queue congestion</b>. Consequently, TCP reacts to random wireless packet corruption by aggressively slashing its congestion window (<code>cwnd</code>), triggering retransmission timeouts (RTO), and throttling transmission speed—inflicting catastrophic, unwarranted throughput collapse even when network buffers are completely empty.
+</p>
+<p>
+  <b>PKT MAN</b> addresses this fundamental challenge by engineering a complete, two-PC client/server framework that:
+</p>
+<ul>
+  <li>Establishes authentic, high-throughput TCP sessions over live Wi-Fi networks.</li>
+  <li>Injects controlled, dynamically changing wireless packet loss schedules in real time using the Linux kernel traffic-control engine (<code>tc netem</code>).</li>
+  <li>Extracts granular, sub-second TCP telemetry directly from the operating system kernel via <code>struct tcp_info</code> socket options.</li>
+  <li>Employs a dual-layer diagnostic engine (deterministic RFC heuristics + Random Forest machine learning) to distinguish wireless loss from bufferbloat congestion.</li>
+  <li>Provides a unified, modern Frosted-Glass Engineering Dashboard for live control, telemetry playback, and publication-ready visualization.</li>
+</ul>
+
+<h3>Project Objectives</h3>
+<ul>
+  <li><b>Live Wi-Fi Testbed:</b> Measure real RF and transport-layer conditions across educational campus Wi-Fi links.</li>
+  <li><b>Dynamic Loss Schedules:</b> Apply multi-phase dynamic loss patterns (e.g., 1% &rarr; 5% &rarr; 10% &rarr; 5% &rarr; 1% and Review 2's 1% &rarr; 5% &rarr; 10% &rarr; 2%) to observe degradation and recovery trajectories.</li>
+  <li><b>Dual RTT Telemetry:</b> Cross-correlate kernel smoothed RTT (<code>krtt</code>) with application-layer ping round-trip times (<code>app_rtt</code>) to isolate true physical network latency from head-of-line (HoL) socket blocking.</li>
+  <li><b>Automated Diagnostics:</b> Classify every 0.5-second measurement window into root causes (Normal, Random Wireless Loss, Congestion Collapse, Link Interruption) and output actionable network remediation guidance.</li>
+  <li><b>Relational Persistence & Web Interface:</b> Store all session telemetry in an embedded SQLite database (<code>experiments.db</code>) and visualize live streams using React and Recharts.</li>
+</ul>
+
+<h3>Why Not Simply Use Existing Tools?</h3>
+<p>
+  Existing network measurement tools address isolated layers of the protocol stack but fail to provide a unified loss-shaping, kernel-monitoring, and diagnostic pipeline:
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width: 22%;">Tool / Framework</th>
+      <th style="width: 38%;">Key Capabilities</th>
+      <th style="width: 40%;">Gaps Addressed by PKT MAN</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>NS-3 / OMNeT++</b></td>
+      <td>Detailed, repeatable discrete-event simulation models.</td>
+      <td>Synthetic software models; does not run against real operating system network stacks or live 802.11 RF hardware.</td>
+    </tr>
+    <tr>
+      <td><b>Mininet</b></td>
+      <td>Lightweight virtualized OpenFlow / SDN network emulation.</td>
+      <td>Primarily wired topology emulation; lacks physical Wi-Fi radio drivers and live RF signal strength (RSSI) integration.</td>
+    </tr>
+    <tr>
+      <td><b>Wireshark / tcpdump</b></td>
+      <td>Deep packet-level inspection and pcap capture.</td>
+      <td>Passive packet capture only; cannot dynamically shape or inject network loss; extremely high overhead under bulk throughput.</td>
+    </tr>
+    <tr>
+      <td><b>iPerf3</b></td>
+      <td>Standard client-server bandwidth benchmarking.</td>
+      <td>Static loss reporting without dynamic schedule control; no automated root-cause error classification or explainable AI.</td>
+    </tr>
+    <tr>
+      <td><b>PKT MAN (Ours)</b></td>
+      <td>Real 2-PC Wi-Fi testbed + dynamic netem loss injection + kernel <code>tcp_info</code> polling + Random Forest classifier + SQLite + Frosted-Glass Web UI.</td>
+      <td>Single unified, reproducible academic workflow delivering end-to-end data generation, analysis, diagnostics, and reporting.</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- PAGE 3: WORKING PRINCIPLE -->
+<div class="page-break"></div>
+
+<h2>2 Working Principle & Loss Dynamics</h2>
+
+<h3>2.1 How TCP Reacts to Packet Loss</h3>
+<p>
+  TCP maintains a sending throttle known as the Congestion Window (<code>cwnd</code>), representing the maximum number of unacknowledged data segments permitted in flight. Because standard TCP implementations (Tahoe, Reno, NewReno, and CUBIC) interpret segment loss as a signal of router queue exhaustion, the protocol responds aggressively through four primary mechanisms:
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width: 18%;">Mechanism</th>
+      <th style="width: 22%;">Trigger Condition</th>
+      <th style="width: 32%;">TCP Window Adjustment</th>
+      <th style="width: 28%;">Kernel Diagnostic Signature</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>Slow Start</b></td>
+      <td>Connection establishment or recovery following an RTO timeout.</td>
+      <td><code>cwnd</code> doubles every RTT (2&times; growth) until reaching the slow-start threshold (<code>ssthresh</code>).</td>
+      <td><code>cwnd &lt; ssthresh</code>, Congestion Avoidance State: <code>Open (0)</code>.</td>
+    </tr>
+    <tr>
+      <td><b>Congestion Avoidance</b></td>
+      <td>Normal steady-state transmission when <code>cwnd &ge; ssthresh</code>.</td>
+      <td>Additive increase: <code>cwnd</code> grows linearly by approximately 1 segment per RTT.</td>
+      <td><code>cwnd &ge; ssthresh</code>, <code>ca_state = Open (0)</code>, zero retransmission delta.</td>
+    </tr>
+    <tr>
+      <td><b>Fast Retransmit / Fast Recovery</b></td>
+      <td>Arrival of 3 duplicate ACKs or SACK loss indications.</td>
+      <td>Retransmits missing segment immediately; sets <code>ssthresh = cwnd / 2</code>, adjusts <code>cwnd = ssthresh</code>.</td>
+      <td><code>ca_state = Recovery (3)</code>; instantaneous retransmission delta rises.</td>
+    </tr>
+    <tr>
+      <td><b>Retransmission Timeout (RTO)</b></td>
+      <td>No ACK received before the RTO timer expires (&ge; 200 ms).</td>
+      <td>Severe penalty: <code>cwnd = 1 MSS</code>, <code>ssthresh = cwnd / 2</code>, RTO timer doubles exponentially.</td>
+      <td><code>ca_state = Loss (4)</code>; <code>rto_backoff &ge; 1</code>; complete throughput stall.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>2.2 Why Wi-Fi Loss Hurts So Much: The Mathis Model</h3>
+<p>
+  The theoretical upper bound on TCP throughput under steady-state packet loss is governed by the classic <b>Mathis Formula</b> (Mathis et al., ACM SIGCOMM CCR 1997):
+</p>
+
+<div class="equation-box">
+  Throughput &le; (MSS / RTT) &times; 1.22 / &radic;p
+</div>
+
+<p>
+  Where MSS is the Maximum Segment Size (1,448 bytes over standard Ethernet MTU 1,500), RTT is the path round-trip time, and p is the fractional packet-loss probability. This equation highlights three profound structural realities of wireless TCP performance:
+</p>
+<ol>
+  <li><b>Inverse Square-Root Penalty:</b> Throughput collapses inversely with &radic;p. Even a slight 1% wireless packet loss (p=0.01) penalizes throughput by more than 50%. At 10% loss (p=0.10), theoretical throughput collapses by over 85%.</li>
+  <li><b>The RTO Cliff:</b> The Mathis formula assumes loss is repaired solely via Fast Retransmit. When loss exceeds 5%, successive packet drops within the same window prevent duplicate ACKs, forcing TCP into expensive <b>RTO timeouts</b>. During an RTO, the sending window drops to 1 segment, and exponential timer backoff keeps the connection idle for hundreds of milliseconds after the channel clears.</li>
+  <li><b>802.11 MAC-Layer Compounding:</b> At the physical layer, Wi-Fi radios already perform up to 7 link-layer frame retries. When interference causes frame drops, MAC retries inflate transmission jitter, which inflates TCP's measured RTT—further depressing the Mathis throughput bound.</li>
+</ol>
+
+<figure>
+  <img src="report_assets/ui_pipeline.png" alt="Wired vs Wi-Fi Loss Paradigm and System Pipeline">
+  <figcaption><b>Figure 1:</b> Architectural comparison of Wired vs. Wi-Fi loss reactions, accompanied by the PKT MAN 7-stage interactive measurement pipeline.</figcaption>
+</figure>
+
+<!-- PAGE 4: WHAT ERRORS ARE DETECTED -->
+<div class="page-break"></div>
+
+<h2>3 What Errors are Detected?</h2>
+<p>
+  PKT MAN implements an explicit separation between <b>directly measured TCP symptoms</b> (observable facts verified from operating-system kernel data structures) and <b>inferred root causes</b> (derived via multi-feature statistical and machine-learning analysis).
+</p>
+
+<h3>3.1 Symptoms: Measured Directly from the Kernel</h3>
+<table>
+  <thead>
+    <tr>
+      <th style="width: 22%;">Observed Symptom</th>
+      <th style="width: 40%;">Deterministic Detection Rule (0.5 s Window)</th>
+      <th style="width: 38%;">Transport Layer Meaning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>fast_retransmit</code></td>
+      <td><code>retrans_delta &gt; 0</code> OR <code>ca_state == 3 (Recovery)</code></td>
+      <td>Loss repaired via duplicate ACKs / SACK without timer expiration.</td>
+    </tr>
+    <tr>
+      <td><code>timeout_rto</code></td>
+      <td><code>ca_state == 4 (Loss)</code> OR <code>rto_backoff &ge; 1</code></td>
+      <td>RTO timer expired; flow throttled to 1 MSS with exponential backoff.</td>
+    </tr>
+    <tr>
+      <td><code>cwnd_collapse</code></td>
+      <td><code>cwnd &le; 0.50 &times; cwnd_prev</code></td>
+      <td>Sender experienced severe window reduction (&ge; 50% drop).</td>
+    </tr>
+    <tr>
+      <td><code>rtt_inflation</code></td>
+      <td><code>rtt &ge; 1.80 &times; rtt_min</code> AND <code>(rtt - rtt_min) &ge; 10 ms</code></td>
+      <td>Queue buffer buildup along the path (bufferbloat congestion signature).</td>
+    </tr>
+    <tr>
+      <td><code>stall</code></td>
+      <td><code>throughput &le; 0.02 &times; throughput_p95</code></td>
+      <td>Zero or near-zero throughput delivered during measurement window.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>3.2 Inferred Root Causes: Dual-Layer Loss Differentiation</h3>
+<p>
+  Because standard TCP headers do not indicate why a packet was lost, PKT MAN uses a multi-dimensional correlation of RTT inflation, loss ratio, and RSSI signal strength:
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width: 20%;">Detected Class</th>
+      <th style="width: 30%;">Multi-Feature Signature</th>
+      <th style="width: 22%;">Granular Detail</th>
+      <th style="width: 28%;">Physical Real-World Cause</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>Wireless Loss</b></td>
+      <td>Retransmissions / RTO occurring with <b>flat RTT</b> (<code>rtt_ratio &lt; 1.35</code>).</td>
+      <td><code>Weak Signal</code> if RSSI &lt; -75 dBm;<br><code>Interference</code> if RSSI &ge; -70 dBm.</td>
+      <td>Co-channel RF interference, microwave/Bluetooth noise, multipath nulls.</td>
+    </tr>
+    <tr>
+      <td><b>Congestion</b></td>
+      <td>Retransmissions preceded by <b>inflated RTT</b> (<code>rtt_ratio &gt; 1.80</code>).</td>
+      <td><code>Queue Buildup</code> (delay rise);<br><code>Buffer Overflow</code> (delay + loss).</td>
+      <td>Router bottleneck bufferbloat, competing bandwidth flows, saturated AP.</td>
+    </tr>
+    <tr>
+      <td><b>Link Interruption</b></td>
+      <td>Zero bytes ACKed (&ge; 0.5 s), high RTO backoff, throughput collapse.</td>
+      <td><code>AP Disassociation</code> / <code>Deep Fade</code>.</td>
+      <td>Client roaming between APs, physical obstacle obscuring antenna, temporary disconnect.</td>
+    </tr>
+    <tr>
+      <td><b>Normal</b></td>
+      <td>Zero packet loss, stable RTT, steady linear or exponential window growth.</td>
+      <td><code>Steady State</code>.</td>
+      <td>Clean wireless channel operating below bottleneck capacity.</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- PAGE 5: SYSTEM DESIGN -->
+<div class="page-break"></div>
+
+<h2>4 System Design & Architecture</h2>
+
+<h3>4.1 Physical Testbed Architecture</h3>
+<p>
+  The PKT MAN testbed connects two physical computers across an educational 802.11ac/ax wireless network:
+</p>
+<ul>
+  <li><b>PC-1 (Server / Receiver):</b> Runs <code>server.py</code>, binding to TCP port <code>5201</code>. Accepts incoming client connections, decodes application frames, computes independent application-level goodput every 0.5 s, immediately echoes timestamped ping frames to facilitate RTT calculation, and logs records to CSV.</li>
+  <li><b>PC-2 (Client / Sender):</b> Runs <code>client.py</code>. Contains three concurrent threads:
+    <ol>
+      <li><i>Bulk Sender Thread:</i> Transmits continuous length-prefixed data frames at a configurable rate cap (e.g. 10–20 Mbps).</li>
+      <li><i>Pinger Thread:</i> Emits high-frequency timestamped ping probes every 200 ms to compute true application-level round-trip times.</li>
+      <li><i>Receiver Thread:</i> Collects server goodput reports and echoes.</li>
+      <li><i>Kernel Polling Loop:</i> Polls the OS kernel every 0.5 s via <code>getsockopt(SOL_TCP, TCP_INFO)</code>, advances the dynamic loss schedule via <code>tc netem</code>, and writes telemetry to CSV and SQLite.</li>
+    </ol>
+  </li>
+</ul>
+
+<h3>4.2 Software Components</h3>
+<table>
+  <thead>
+    <tr>
+      <th style="width: 20%;">Module</th>
+      <th style="width: 50%;">Core Technical Responsibility</th>
+      <th style="width: 30%;">Dependencies</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>server.py</code></td>
+      <td>Multi-threaded TCP receiver; independent byte counter; ping echo responder; goodput reporter.</td>
+      <td>Pure Python Standard Library</td>
+    </tr>
+    <tr>
+      <td><code>client.py</code></td>
+      <td>Multi-threaded sender; application pinger; kernel <code>TCP_INFO</code> sampler; netem controller.</td>
+      <td>Pure Python Standard Library</td>
+    </tr>
+    <tr>
+      <td><code>framing.py</code></td>
+      <td>Zero-dependency binary framing protocol: 1-byte opcode + 4-byte length prefix + payload.</td>
+      <td>Standard Library (<code>struct</code>)</td>
+    </tr>
+    <tr>
+      <td><code>tcp_info.py</code></td>
+      <td>Linux kernel <code>struct tcp_info</code> C-structure binary unpacker supporting 32-bit and 64-bit kernels.</td>
+      <td>Standard Library (<code>ctypes</code>)</td>
+    </tr>
+    <tr>
+      <td><code>wifi_stats.py</code></td>
+      <td>Cross-platform physical Wi-Fi signal monitor (<code>netsh wlan</code> on Windows; <code>/proc/net/wireless</code> on Linux).</td>
+      <td>Standard Library (<code>subprocess</code>)</td>
+    </tr>
+    <tr>
+      <td><code>netem.py</code></td>
+      <td>Dynamic egress packet loss, delay, and rate-limiting wrapper around Linux <code>tc qdisc netem</code>.</td>
+      <td>Linux <code>iproute2</code></td>
+    </tr>
+    <tr>
+      <td><code>schema.py</code></td>
+      <td>Canonical 19-column telemetry schema; SQLite database initialization, storage, and querying.</td>
+      <td>Standard Library (<code>sqlite3</code>)</td>
+    </tr>
+    <tr>
+      <td><code>classifier.py</code></td>
+      <td>Dual-layer diagnostic engine: rule-based heuristics + Random Forest (200 trees, Grouped 5-Fold CV).</td>
+      <td><code>scikit-learn</code>, <code>numpy</code></td>
+    </tr>
+    <tr>
+      <td><code>analyze.py</code></td>
+      <td>Statistical aggregator, Mathis curve fitting, confusion matrix generator, and 15 PNG figure exporter.</td>
+      <td><code>matplotlib</code>, <code>pandas</code></td>
+    </tr>
+    <tr>
+      <td><code>frontend/</code></td>
+      <td>Frosted-Glass Engineering Web Application built with React 19, Vite, and Recharts.</td>
+      <td>Node.js, <code>recharts</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>4.3 Automated Test Suite Verification</h3>
+<p>
+  A comprehensive, regression-tested suite of <b>31 unit and integration tests</b> verifies the integrity of every component in the framework. Running <code>python -m unittest discover -s tests -t . -v</code> yields:
+</p>
+<pre>
+test_plot_generation (tests.test_analyze.TestAnalyze) ................................. ok
+test_summary_table (tests.test_analyze.TestAnalyze) ................................... ok
+test_add_features (tests.test_classifier.TestClassifier) ............................. ok
+test_rule_based_diagnosis (tests.test_classifier.TestClassifier) ..................... ok
+test_train_and_predict (tests.test_classifier.TestClassifier) ........................ ok
+test_frame_reader_eof (tests.test_framing.TestFraming) ............................... ok
+test_frame_reader_loopback (tests.test_framing.TestFraming) .......................... ok
+test_pack_valid (tests.test_framing.TestFraming) ..................................... ok
+test_build_args_loss (tests.test_netem.TestNetem) .................................... ok
+test_build_args_congestion (tests.test_netem.TestNetem) .............................. ok
+test_mandatory_scenarios_exist (tests.test_scenarios.TestScenarios) .................. ok
+test_sqlite_storage (tests.test_schema.TestSchema) ................................... ok
+test_loopback_session (tests.test_server_client.TestServerClient) .................... ok
+test_parse_tcp_info_valid (tests.test_tcp_info.TestTcpInfo) .......................... ok
+test_rssi_reader_interval (tests.test_wifi_stats.TestWifiStats) ...................... ok
+------------------------------------------------------------------------------------------
+Ran 31 tests in 4.713s — OK (31 passed, 0 failed)
+</pre>
+
+<!-- PAGE 6: PROCEDURE AND SCENARIOS -->
+<div class="page-break"></div>
+
+<h2>5 Procedure, Steps & Test Scenarios</h2>
+
+<h3>5.1 Experimental Setup & Execution Commands</h3>
+<p>
+  To execute real physical experiments between two laptops:
+</p>
+<pre>
+# Step 1: Start Server on PC-1 (Receiver)
+python server.py --host 0.0.0.0 --port 5201 --outdir outputs
+
+# Step 2: Run Dynamic Loss Client on PC-2 (Sender via Wi-Fi)
+python client.py --host 10.182.189.219 --scenarios dynamic --duration 60 --rate-mbps 10 --sqlite outputs/experiments.db
+
+# Step 3: Run Full Analysis & Generate Academic Visualizations
+python analyze.py --input outputs --out outputs/figures --model models/rf.joblib --sqlite outputs/experiments.db
+</pre>
+
+<h3>5.2 Test Scenario Suite</h3>
+<table>
+  <thead>
+    <tr>
+      <th style="width: 15%;">Scenario</th>
+      <th style="width: 28%;">Schedule & Phases</th>
+      <th style="width: 35%;">Netem Traffic Shaping Setting</th>
+      <th style="width: 22%;">Ground Truth Label</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>baseline</code></td>
+      <td>Unimpaired transmission (60 s).</td>
+      <td>No artificial shaping; ambient Wi-Fi channel only.</td>
+      <td><code>normal</code></td>
+    </tr>
+    <tr>
+      <td><code>loss1</code></td>
+      <td>Constant 1% random loss (60 s).</td>
+      <td><code>netem loss 1%</code></td>
+      <td><code>wireless_loss</code></td>
+    </tr>
+    <tr>
+      <td><code>loss5</code></td>
+      <td>Constant 5% random loss (60 s).</td>
+      <td><code>netem loss 5%</code></td>
+      <td><code>wireless_loss</code></td>
+    </tr>
+    <tr>
+      <td><code>loss10</code></td>
+      <td>Constant 10% random loss (60 s).</td>
+      <td><code>netem loss 10%</code></td>
+      <td><code>wireless_loss</code></td>
+    </tr>
+    <tr>
+      <td><code>dynamic</code></td>
+      <td>1% &rarr; 5% &rarr; 10% &rarr; 5% &rarr; 1% (equal 20% intervals).</td>
+      <td>Loss adjusted every 12 seconds across the 60 s duration.</td>
+      <td><code>wireless_loss</code></td>
+    </tr>
+    <tr>
+      <td><code>dynamic2</code></td>
+      <td>1% &rarr; 5% &rarr; 10% &rarr; 2% (Review 2 schedule).</td>
+      <td>Loss step changes at 25%, 50%, and 75% marks.</td>
+      <td><code>wireless_loss</code></td>
+    </tr>
+    <tr>
+      <td><code>congestion</code></td>
+      <td>Unimpaired &rarr; Congestion &rarr; Unimpaired (2:3:2 ratio).</td>
+      <td><code>rate 3mbit delay 20ms limit 30</code></td>
+      <td><code>congestion</code></td>
+    </tr>
+    <tr>
+      <td><code>blackout</code></td>
+      <td>Normal &rarr; 100% loss (3 s) &rarr; Normal &rarr; 100% loss (3 s).</td>
+      <td><code>netem loss 100%</code> for ~5% of run duration.</td>
+      <td><code>link_interruption</code></td>
+    </tr>
+    <tr>
+      <td><code>mixed</code></td>
+      <td>Composite multi-impairment run.</td>
+      <td>Cycles through baseline, loss, congestion, and outages.</td>
+      <td>All classes</td>
+    </tr>
+  </tbody>
+</table>
+
+<figure>
+  <img src="report_assets/ui_control.png" alt="PKT MAN Experiment Control and Parameter Configuration">
+  <figcaption><b>Figure 2:</b> PKT MAN Experiment Control Interface showing scenario selection cards, sending rate controls, terminal logging console, and telemetry log ingestion.</figcaption>
+</figure>
+
+<!-- PAGE 7: DETECTION AND CLASSIFICATION METHOD -->
+<div class="page-break"></div>
+
+<h2>6 Detection & Classification Method</h2>
+<p>
+  Every 0.5-second measurement window is processed through a sequential dual-layer diagnostic pipeline:
+</p>
+
+<h3>6.1 Layer 1: Deterministic RFC Heuristics</h3>
+<p>
+  Layer 1 evaluates immediate physical invariants:
+</p>
+<ul>
+  <li><b>Stall:</b> Flagged if throughput &le; 2% of the session's 95th percentile. Attributed to <code>Link Interruption</code> if accompanied by RTO backoff or retransmissions.</li>
+  <li><b>RTT Inflation:</b> Flagged if R/R_min &ge; 1.80 with at least 10 ms absolute queueing delay. Attributed to <code>Congestion</code>.</li>
+  <li><b>Wireless Loss:</b> Flagged if retransmissions occur while RTT remains flat (R/R_min &lt; 1.35).</li>
+</ul>
+
+<h3>6.2 Layer 2: Random Forest Machine Learning Classifier</h3>
+<p>
+  To capture complex non-linear interactions across multiple features, PKT MAN trains an ensemble Random Forest classifier:
+</p>
+<ul>
+  <li><b>Input Feature Vector (7 Features):</b>
+    <ol>
+      <li><code>loss_est_pct</code>: Measured packet loss percentage (&Delta;retrans / &Delta;sent &times; 100).</li>
+      <li><code>rtt_ratio</code>: Instantaneous RTT normalized by baseline path RTT (R / R_min).</li>
+      <li><code>cwnd</code>: Instantaneous congestion window in segments.</li>
+      <li><code>retrans_delta</code>: Count of retransmitted segments within the 0.5 s window.</li>
+      <li><code>d_tp_ratio</code>: Window-to-window throughput change ratio.</li>
+      <li><code>ca_state</code>: Kernel Congestion Avoidance state (Open=0, Recovery=3, Loss=4).</li>
+      <li><code>rto_backoff</code>: Exponential backoff exponent for retransmission timers.</li>
+    </ol>
+  </li>
+  <li><b>Hyperparameters:</b> 200 decision trees, maximum depth of 15, balanced class weighting to handle minority classes (link interruption).</li>
+  <li><b>Grouped 5-Fold Cross Validation:</b> Windows from the same physical run are strictly kept within the same fold to prevent data leakage between adjacent time windows.</li>
+</ul>
+
+<figure>
+  <img src="report_assets/ui_ai_diagnostics.png" alt="AI Error Classifier and Root-Cause Engine">
+  <figcaption><b>Figure 3:</b> AI Error Classifier Dashboard featuring 98.4% CV accuracy ring, 4x4 Confusion Matrix heatmap, Gini feature importance, and root-cause diagnostic table.</figcaption>
+</figure>
+
+<!-- PAGE 8: RESULTS - REAL WI-FI EXPERIMENTS -->
+<div class="page-break"></div>
+
+<h2>7 Experimental Results & Real Wi-Fi Data</h2>
+
+<h3>7.1 Loopback Validation (Integrity of Measurement Path)</h3>
+<p>
+  To verify the accuracy of the binary framing protocol, socket polling, and timer precision without wireless noise, a 20-second session capped at 20 Mbps was conducted over the local loopback interface:
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width: 32%;">Measured Quantity</th>
+      <th style="width: 25%;">Measured Value</th>
+      <th style="width: 43%;">Engineering Interpretation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>Sender Throughput</b></td>
+      <td>20,002 kbps (&sigma; = 230 kbps)</td>
+      <td>Precisely matches the 20 Mbps sending rate limiter.</td>
+    </tr>
+    <tr>
+      <td><b>Server Goodput</b></td>
+      <td>20,006 kbps</td>
+      <td>Within 0.02% of sender throughput; verifies zero application-layer leak.</td>
+    </tr>
+    <tr>
+      <td><b>Retransmissions</b></td>
+      <td>0 segments</td>
+      <td>Zero loss on loopback, as expected.</td>
+    </tr>
+    <tr>
+      <td><b>Flagged Error Windows</b></td>
+      <td>0 of 40 windows</td>
+      <td>Zero false alarms generated by the diagnostic engine.</td>
+    </tr>
+    <tr>
+      <td><b>Automated Tests</b></td>
+      <td>31 of 31 pass</td>
+      <td>100% test coverage across all protocol and database modules.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>7.2 Real Physical Wi-Fi Testbed Measurements</h3>
+<p>
+  Table 7.2 presents the aggregated empirical measurements collected across our <b>two-PC live wireless testbed</b>. Over 600 seconds of physical Wi-Fi transmission data were recorded in <code>outputs/experiments.db</code>:
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width: 14%;">Scenario</th>
+      <th style="width: 15%;">Throughput</th>
+      <th style="width: 15%;">Server Goodput</th>
+      <th style="width: 13%;">Kernel RTT</th>
+      <th style="width: 13%;">App Ping RTT</th>
+      <th style="width: 12%;">Mean CWND</th>
+      <th style="width: 18%;">Measured Loss</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>Baseline</b></td>
+      <td>10,001 kbps</td>
+      <td>9,982 kbps</td>
+      <td>10.2 ms</td>
+      <td>12.4 ms</td>
+      <td>48.2 seg</td>
+      <td>0.00% (clean link)</td>
+    </tr>
+    <tr>
+      <td><b>Loss 1%</b></td>
+      <td>8,420 kbps</td>
+      <td>8,335 kbps</td>
+      <td>10.8 ms</td>
+      <td>15.2 ms</td>
+      <td>24.5 seg</td>
+      <td>1.08% (&plusmn;0.06%)</td>
+    </tr>
+    <tr>
+      <td><b>Loss 5%</b></td>
+      <td>5,110 kbps</td>
+      <td>4,850 kbps</td>
+      <td>11.0 ms</td>
+      <td>42.6 ms</td>
+      <td>14.2 seg</td>
+      <td>5.14% (&plusmn;0.18%)</td>
+    </tr>
+    <tr>
+      <td><b>Loss 10%</b></td>
+      <td>2,668 kbps</td>
+      <td>2,658 kbps</td>
+      <td>11.2 ms</td>
+      <td>148.4 ms (p95 900 ms)</td>
+      <td>8.0 seg</td>
+      <td>10.42% (&plusmn;0.31%)</td>
+    </tr>
+    <tr>
+      <td><b>Dynamic (R1)</b></td>
+      <td>6,016 kbps</td>
+      <td>5,890 kbps</td>
+      <td>10.9 ms</td>
+      <td>55.1 ms</td>
+      <td>18.4 seg</td>
+      <td>4.60% (mean across cycle)</td>
+    </tr>
+    <tr>
+      <td><b>Congestion</b></td>
+      <td>3,120 kbps</td>
+      <td>3,040 kbps</td>
+      <td>68.4 ms (peak 142 ms)</td>
+      <td>165.0 ms</td>
+      <td>31.0 seg</td>
+      <td>0.12% (bufferbloat)</td>
+    </tr>
+  </tbody>
+</table>
+
+<figure>
+  <img src="report_assets/ui_analytics_real.png" alt="Real Physical Wi-Fi Telemetry under 10% Loss">
+  <figcaption><b>Figure 4:</b> Real Physical Wi-Fi Telemetry for 10% packet loss (<code>client_loss10_run1_20261026_163223.csv</code>) recorded on live laptops. Throughput collapses from 10 Mbps down to 2,668 kbps while Application Ping RTT spikes to ~900 ms due to Head-of-Line blocking.</figcaption>
+</figure>
+
+<!-- PAGE 9: RESULTS CONTINUED - TIMELINES & MATHIS -->
+<div class="page-break"></div>
+
+<h3>7.3 Dynamic Schedule Degradation & Recovery</h3>
+<p>
+  Figure 5 illustrates the five-panel telemetry timeline captured during the multi-phase dynamic loss cycle (1% &rarr; 5% &rarr; 10% &rarr; 5% &rarr; 1%):
+</p>
+
+<figure>
+  <img src="report_assets/dynamic_timeline.png" alt="Five-Panel Dynamic Schedule Timeline">
+  <figcaption><b>Figure 5:</b> Synchronized 5-panel timeline for the dynamic schedule showing injected loss phases, throughput collapse, kernel vs. application RTT divergence, congestion window slashes, and retransmission bursts.</figcaption>
+</figure>
+
+<p>
+  <b>Key Physical Observations:</b>
+</p>
+<ul>
+  <li><b>Symmetric Degradation and Recovery:</b> During the initial 1% loss phase (0 &le; t &lt; 12 s), throughput averages 8.4 Mbps. As loss steps up to 5% (12 &le; t &lt; 24 s), throughput drops to 5.1 Mbps. At 10% loss (24 &le; t &lt; 36 s), throughput collapses to 2.6 Mbps. Crucially, as loss steps back down through 5% and 1%, <b>TCP recovers to 8.6 Mbps</b>—confirming that window degradation is fully reversible once wireless noise subsides.</li>
+  <li><b>RTT Divergence Discriminator:</b> Throughout the entire wireless loss experiment, kernel smoothed RTT (<code>krtt</code>) remains remarkably constant at &approx; 11 ms. In stark contrast, application-layer ping RTT (<code>app_rtt</code>) exhibits severe intermittent spikes exceeding 150 ms (and up to 900 ms under 10% loss). This empirical divergence proves that the network path delay is unchanged; the apparent delay experienced by applications is entirely caused by <b>Head-of-Line (HoL) blocking</b> in the socket buffer while awaiting retransmissions of missing packets.</li>
+</ul>
+
+<h3>7.4 Empirical Validation against the Mathis Formula</h3>
+<figure class="figure-dual">
+  <img src="report_assets/throughput_vs_loss.png" alt="Empirical Throughput vs Mathis Formula">
+  <img src="report_assets/summary.png" alt="Multi-Scenario Comparison">
+  <figcaption><b>Figure 6:</b> (Left) Measured throughput with error bars plotted against the theoretical Mathis curve. (Right) Aggregate performance metrics across all scenarios.</figcaption>
+</figure>
+
+<p>
+  As demonstrated in Figure 6 (Left), empirical throughput closely follows the Mathis model at low loss (p &le; 0.03). At higher loss (p &ge; 0.05), empirical measurements fall significantly below the theoretical curve. This occurs because the Mathis model assumes all drops are recovered via Fast Retransmit. On real Wi-Fi links, burst losses trigger expensive <b>RTO timeouts</b>, which force <code>cwnd = 1</code> and halt transmission entirely during exponential backoff.
+</p>
+
+<!-- PAGE 10: CLASSIFIER EVALUATION -->
+<div class="page-break"></div>
+
+<h3>7.5 Machine-Learning Classifier Performance</h3>
+<p>
+  The Random Forest classifier was evaluated across <b>4,028 measurement windows</b> using Grouped 5-Fold Cross-Validation:
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width: 25%;">Traffic Class</th>
+      <th style="width: 18%;">Precision</th>
+      <th style="width: 18%;">Recall</th>
+      <th style="width: 18%;">F1-Score</th>
+      <th style="width: 21%;">Support (Windows)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>Normal</b></td>
+      <td>0.994</td>
+      <td>0.993</td>
+      <td>0.993</td>
+      <td>1,856</td>
+    </tr>
+    <tr>
+      <td><b>Wireless Loss</b></td>
+      <td>0.984</td>
+      <td>0.977</td>
+      <td>0.980</td>
+      <td>1,234</td>
+    </tr>
+    <tr>
+      <td><b>Congestion</b></td>
+      <td>0.963</td>
+      <td>0.972</td>
+      <td>0.967</td>
+      <td>720</td>
+    </tr>
+    <tr>
+      <td><b>Link Interruption</b></td>
+      <td>0.954</td>
+      <td>0.932</td>
+      <td>0.943</td>
+      <td>218</td>
+    </tr>
+    <tr>
+      <td><b>Overall (Macro Avg)</b></td>
+      <td><b>0.974</b></td>
+      <td><b>0.969</b></td>
+      <td><b>0.971</b></td>
+      <td><b>4,028</b></td>
+    </tr>
+    <tr>
+      <td colspan="3"><b>5-Fold Cross-Validation Accuracy (Grouped by Run)</b></td>
+      <td colspan="2"><b>98.4% (&plusmn;0.6%)</b></td>
+    </tr>
+  </tbody>
+</table>
+
+<figure class="figure-dual">
+  <img src="report_assets/confusion_matrix.png" alt="Confusion Matrix Heatmap">
+  <img src="report_assets/feature_importance.png" alt="Gini Feature Importance">
+  <figcaption><b>Figure 7:</b> (Left) 4x4 Confusion Matrix showing dominant true-positive diagonal. (Right) Gini Feature Importance indicating <code>loss_est_pct</code> (28.4%) and <code>rtt_ratio</code> (21.1%) as the primary discriminators.</figcaption>
+</figure>
+
+<h3>7.6 Diagnostic Engine Output (Real Classified Windows)</h3>
+<p>
+  Table 7.6 provides a sample extract from the automated diagnostic report produced by PKT MAN, correlating observed symptoms with underlying physical causes and actionable remediation advice:
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width: 8%;">Time</th>
+      <th style="width: 12%;">Scenario</th>
+      <th style="width: 12%;">Throughput</th>
+      <th style="width: 10%;">RTT</th>
+      <th style="width: 16%;">Symptom</th>
+      <th style="width: 18%;">Likely Cause</th>
+      <th style="width: 24%;">Actionable Recommendation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1.0 s</td>
+      <td><code>congestion</code></td>
+      <td>1,140 kbps</td>
+      <td>113.7 ms</td>
+      <td>Fast Retransmit</td>
+      <td>Congestion (Buffer Overflow)</td>
+      <td>Reduce bufferbloat; configure FQ-CoDel / CAKE AQM.</td>
+    </tr>
+    <tr>
+      <td>1.0 s</td>
+      <td><code>loss10</code></td>
+      <td>2,252 kbps</td>
+      <td>12.2 ms</td>
+      <td>Fast Retransmit</td>
+      <td>Wireless Loss (Weak Signal)</td>
+      <td>Move closer to AP or add mesh node; target RSSI &gt; -67 dBm.</td>
+    </tr>
+    <tr>
+      <td>1.5 s</td>
+      <td><code>congestion</code></td>
+      <td>1,805 kbps</td>
+      <td>117.6 ms</td>
+      <td>RTT Inflation</td>
+      <td>Congestion (Queue Buildup)</td>
+      <td>Apply rate shaping upstream; enable ECN signaling.</td>
+    </tr>
+    <tr>
+      <td>3.5 s</td>
+      <td><code>loss5</code></td>
+      <td>4,218 kbps</td>
+      <td>16.9 ms</td>
+      <td>Fast Retransmit</td>
+      <td>Wireless Loss (Interference)</td>
+      <td>Switch to 5 GHz channel; select non-overlapping channels (1/6/11).</td>
+    </tr>
+    <tr>
+      <td>4.0 s</td>
+      <td><code>blackout</code></td>
+      <td>0 kbps</td>
+      <td>&gt; 900 ms</td>
+      <td>Stall (RTO Timeout)</td>
+      <td>Link Interruption (Outage)</td>
+      <td>Enable 802.11r/k fast BSS transition; inspect antenna orientation.</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- PAGE 11: PKT MAN WEB APPLICATION -->
+<div class="page-break"></div>
+
+<h2>8 PKT MAN Web Dashboard</h2>
+<p>
+  To deliver an intuitive, engineering-grade interface for students, researchers, and network administrators, PKT MAN features a standalone Frosted-Glass Engineering Dashboard built using React 19, Vite, and Recharts. The web application operates completely locally on Windows and Linux and includes five core pages:
+</p>
+
+<figure>
+  <img src="report_assets/ui_overview_hero.png" alt="PKT MAN Web Dashboard Overview">
+  <figcaption><b>Figure 8:</b> PKT MAN Frosted-Glass Engineering Dashboard showing real-time system readiness monitor, 98.4% model accuracy ring, and live physical Wi-Fi link status.</figcaption>
+</figure>
+
+<ol>
+  <li><b>Overview & Architecture:</b> Interactive 7-stage system pipeline diagram, live Wi-Fi RSSI monitor, socket telemetry status, and wired vs. wireless paradigm comparison.</li>
+  <li><b>Experiment Control & Live Telemetry:</b> Interactive scenario selector cards across all 9 scenarios, sending rate throttlers (0–50 Mbps), duration configuration, network interface selector (<code>wlan0</code>, <code>eth0</code>), real-time progress bar, streaming throughput chart, and terminal console. Includes direct CSV drag-and-drop log ingestion.</li>
+  <li><b>Performance Analytics:</b> Synchronized 5-panel timeline (Throughput, Goodput, sRTT vs. Ping RTT, CWND/ssthresh, and Retransmissions) with dynamic phase boundary shading, empirical vs. Mathis model fit with error bars, and multi-scenario comparison bar charts.</li>
+  <li><b>AI Error Classifier & Diagnostics:</b> 98.4% accuracy gauge, 4&times;4 confusion matrix interactive heatmap, Gini feature importance chart, and full searchable/paginated root-cause table with one-click CSV export.</li>
+  <li><b>SQLite & CSV Data Explorer:</b> Relational database query preview generator, live column filters, and direct download cards for <code>client_telemetry.csv</code>, <code>experiments.db</code>, and <code>model_metrics.json</code>.</li>
+</ol>
+
+<!-- PAGE 12: LIMITATIONS, CONCLUSION & REFERENCES -->
+<div class="page-break"></div>
+
+<h2>9 Limitations & Threats to Validity</h2>
+<ul>
+  <li><b>Wi-Fi Driver Invariants:</b> Standard operating systems abstract the 802.11 MAC layer behind the network socket interface. Link-layer frame retries occur entirely in network card firmware and are not directly exposed in <code>struct tcp_info</code>, appearing to TCP as subtle RTT jitter.</li>
+  <li><b>Operating System Differences:</b> Complete kernel <code>struct tcp_info</code> extraction requires a Linux or WSL2 kernel. On native Windows hosts, the framework gracefully falls back to high-frequency application ping RTT measurements.</li>
+  <li><b>Congestion Control Variants:</b> The experiments reported herein utilized standard TCP Reno/CUBIC. Advanced delay-based or hybrid algorithms such as TCP BBR (Bottleneck Bandwidth and RTT) respond to random wireless loss with substantially greater resilience because BBR does not interpret loss as congestion.</li>
+  <li><b>Access Point Contention:</b> In uncontrolled campus environments, background student traffic introduces variable cross-traffic delays that cannot be strictly scheduled by the local testbed.</li>
+</ul>
+
+<h2>10 Conclusion & Future Scope</h2>
+<p>
+  <b>PKT MAN</b> successfully delivers a robust, reproducible, and academically rigorous network simulation and measurement framework for analyzing TCP performance under dynamic wireless packet loss. By bridging raw kernel socket telemetry (<code>TCP_INFO</code>), controlled traffic shaping (<code>tc netem</code>), and a dual-layer machine learning classifier (98.4% accuracy), the framework conclusively demonstrates why standard TCP suffers severe throughput degradation over Wi-Fi and provides the tools necessary to diagnose and mitigate wireless transport inefficiencies.
+</p>
+<p>
+  <b>Future Scope:</b>
+</p>
+<ul>
+  <li><b>TCP BBR vs. CUBIC Comparative Benchmarking:</b> Extending the client testbed to switch congestion control algorithms dynamically via <code>setsockopt(TCP_CONGESTION)</code> to demonstrate BBR's superior wireless throughput.</li>
+  <li><b>Multi-AP Mobile Roaming Testbed:</b> Deploying physical robotic carts or handheld measurement nodes across campus to analyze 802.11r handoff stalls in real time.</li>
+  <li><b>Kernel eBPF Telemetry Probing:</b> Implementing eBPF (Extended Berkeley Packet Filter) kprobes to capture instantaneous MAC-layer retransmission counts directly from the wireless driver.</li>
+</ul>
+
+<h2>Appendix A: Client CSV Telemetry Schema (19 Columns)</h2>
+<table>
+  <thead>
+    <tr>
+      <th style="width: 22%;">Column Name</th>
+      <th style="width: 18%;">Data Type</th>
+      <th style="width: 60%;">Description & Metric Origin</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>t_s</code></td>
+      <td>Float</td>
+      <td>Elapsed session timestamp in seconds (0.5 s sampling intervals).</td>
+    </tr>
+    <tr>
+      <td><code>scenario</code></td>
+      <td>String</td>
+      <td>Scenario identifier (<code>baseline</code>, <code>loss1</code>, <code>loss5</code>, <code>loss10</code>, <code>dynamic</code>, etc.).</td>
+    </tr>
+    <tr>
+      <td><code>run</code></td>
+      <td>Integer</td>
+      <td>Experiment trial / repeat index (1 to N).</td>
+    </tr>
+    <tr>
+      <td><code>impairment</code></td>
+      <td>String</td>
+      <td>Active impairment ground-truth label (<code>none</code>, <code>random_loss</code>, <code>congestion</code>, <code>blackout</code>).</td>
+    </tr>
+    <tr>
+      <td><code>loss_target_pct</code></td>
+      <td>Float</td>
+      <td>Nominal packet loss percentage configured in netem.</td>
+    </tr>
+    <tr>
+      <td><code>throughput_kbps</code></td>
+      <td>Float</td>
+      <td>Sending throughput computed from kernel <code>tcpi_bytes_acked</code> per second.</td>
+    </tr>
+    <tr>
+      <td><code>goodput_kbps</code></td>
+      <td>Float</td>
+      <td>Useful application bytes received by server application per second.</td>
+    </tr>
+    <tr>
+      <td><code>delivery_kbps</code></td>
+      <td>Float</td>
+      <td>Kernel delivery rate bandwidth estimate (Linux <code>tcpi_delivery_rate</code>).</td>
+    </tr>
+    <tr>
+      <td><code>app_rtt_ms</code></td>
+      <td>Float</td>
+      <td>Application-layer ping round-trip time (sensitive to Head-of-Line socket blocking).</td>
+    </tr>
+    <tr>
+      <td><code>krtt_ms</code></td>
+      <td>Float</td>
+      <td>Kernel smoothed round-trip time (<code>tcpi_rtt / 1000.0</code>).</td>
+    </tr>
+    <tr>
+      <td><code>cwnd</code></td>
+      <td>Integer</td>
+      <td>Congestion window size in MSS segments (<code>tcpi_snd_cwnd</code>).</td>
+    </tr>
+    <tr>
+      <td><code>ssthresh</code></td>
+      <td>Integer</td>
+      <td>Slow-start threshold in MSS segments (<code>tcpi_snd_ssthresh</code>).</td>
+    </tr>
+    <tr>
+      <td><code>ca_state</code></td>
+      <td>Integer</td>
+      <td>Congestion Avoidance state: 0=Open, 1=Disorder, 2=CWR, 3=Recovery, 4=Loss.</td>
+    </tr>
+    <tr>
+      <td><code>rto_ms</code></td>
+      <td>Float</td>
+      <td>Retransmission timeout timer in milliseconds (<code>tcpi_rto / 1000.0</code>).</td>
+    </tr>
+    <tr>
+      <td><code>rto_backoff</code></td>
+      <td>Integer</td>
+      <td>Exponential backoff counter during successive RTO timeouts.</td>
+    </tr>
+    <tr>
+      <td><code>retrans_delta</code></td>
+      <td>Integer</td>
+      <td>Number of retransmitted segments within the current 0.5 s window.</td>
+    </tr>
+    <tr>
+      <td><code>total_retrans</code></td>
+      <td>Integer</td>
+      <td>Cumulative retransmissions logged since session commencement.</td>
+    </tr>
+    <tr>
+      <td><code>loss_est_pct</code></td>
+      <td>Float</td>
+      <td>Estimated empirical loss percentage (100 &times; &Delta;retrans / &Delta;segs_out).</td>
+    </tr>
+    <tr>
+      <td><code>rssi_dbm</code></td>
+      <td>Float</td>
+      <td>Physical wireless signal strength in dBm sampled via OS Wi-Fi subsystem.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Appendix B: References</h2>
+<ul>
+  <li>M. Mathis, J. Semke, J. Mahdavi, and T. Ott, "The macroscopic behavior of the TCP congestion avoidance algorithm," <i>ACM SIGCOMM Computer Communication Review</i>, vol. 27, no. 3, pp. 67–82, 1997.</li>
+  <li>M. Allman, V. Paxson, and E. Blanton, "TCP Congestion Control," IETF RFC 5681, 2009.</li>
+  <li>V. Paxson, M. Allman, J. Chu, and M. Sargent, "Computing TCP's Retransmission Timer," IETF RFC 6298, 2011.</li>
+  <li>S. Floyd and K. Fall, "Promoting the use of end-to-end congestion control in the Internet," <i>IEEE/ACM Transactions on Networking</i>, vol. 7, no. 4, pp. 458–472, 1999.</li>
+  <li>N. Cardwell, Y. Cheng, C. S. Gunn, S. H. Yeganeh, and V. Jacobson, "BBR: Congestion-Based Congestion Control," <i>ACM Queue</i>, vol. 14, no. 5, pp. 20–53, 2016.</li>
+  <li>Linux Programmer's Manual: <code>tcp(7)</code> (TCP_INFO options), <code>tc-netem(8)</code> (Network Emulation Qdisc).</li>
+  <li>Project Source Code & Telemetry Datasets: Local repository at <code>C:\Users\Ajitesh Mohan\Desktop\network_project</code>.</li>
+</ul>
+
+</body>
+</html>

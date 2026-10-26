@@ -1,0 +1,6 @@
+scenario,mean_throughput_kbps,mean_goodput_kbps,mean_delivery_kbps,mean_krtt_ms,p95_app_rtt_ms,mean_cwnd,total_retransmits,mean_loss_est_pct,stalled_windows
+baseline,10001.77,9917.59,23709.96,17.99,44.01,107.84,2,0.0,0
+loss1,10001.63,9895.48,18623.08,14.58,94.25,80.53,279,0.54,0
+loss5,8417.62,8227.44,13333.61,15.66,204.68,70.73,890,2.51,0
+loss10,6333.65,6303.07,13449.08,14.39,344.72,74.57,792,6.63,2
+dynamic,7849.35,8124.26,16741.0,29.07,364.3,83.78,632,2.75,4

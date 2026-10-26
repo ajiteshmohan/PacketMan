@@ -12,7 +12,8 @@ Model: one round per RTT of a SACK-capable Reno-style sender.
   * queue: rate-limited bottleneck with a drop-tail buffer -> RTT inflation and overflow loss
   * application rate limit (like client.py --rate-mbps), cwnd only grows when cwnd-limited
 
-    python simulate.py --outdir demo_data --duration 100 --seed 1
+Usage:
+    python simulate.py --outdir demo_data --duration 100 --seed 1 [--sqlite demo_data/experiments.db]
 """
 import argparse
 import math
@@ -22,7 +23,7 @@ import numpy as np
 import pandas as pd
 
 from scenarios import SCENARIOS, phase_index_at, phase_schedule
-from schema import COLUMNS
+from schema import COLUMNS, save_rows_to_sqlite
 
 MSS = 1448
 
@@ -121,7 +122,7 @@ def simulate_run(scenario, run=1, duration=60.0, seed=0, link_mbps=20.0, base_rt
 
 def generate_training(n_rows=3000, seed=1, duration=60.0, scenarios=None):
     """Simulated labelled data with randomised link parameters (different 'networks')."""
-    scenarios = scenarios or ["baseline", "loss1", "loss5", "loss10", "dynamic", "congestion",
+    scenarios = scenarios or ["baseline", "loss1", "loss5", "loss10", "dynamic", "dynamic2", "congestion",
                               "blackout", "mixed"]
     rng = np.random.default_rng(seed)
     frames, total, i = [], 0, 0
@@ -144,15 +145,21 @@ def main(argv=None):
     ap.add_argument("--scenarios", default="baseline,loss1,loss5,loss10,dynamic,congestion,blackout")
     ap.add_argument("--duration", type=float, default=100.0)
     ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--sqlite", default=None, help="optional SQLite database output path")
     a = ap.parse_args(argv)
     out = Path(a.outdir)
     out.mkdir(parents=True, exist_ok=True)
     for j, name in enumerate(a.scenarios.split(",")):
+        name = name.strip()
         df = simulate_run(name, duration=a.duration, seed=a.seed * 1000 + j)
         path = out / f"client_{name}_run1_sim.csv"
         df.to_csv(path, index=False, lineterminator="\n")
         print(f"{name:11s} mean throughput {df.throughput_kbps.mean():9.0f} kbps  "
               f"retrans {int(df.retrans_delta.sum()):5d}  -> {path}")
+        if a.sqlite:
+            save_rows_to_sqlite(a.sqlite, df.to_dict(orient="records"), source_file=path.name)
+    if a.sqlite:
+        print(f"[sqlite] saved all scenarios to {a.sqlite}")
 
 
 if __name__ == "__main__":

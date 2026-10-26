@@ -4,6 +4,8 @@ __pycache__/
 venv/
 .idea/
 .vscode/
+frontend/node_modules/
+frontend/dist/
 # measurement output (keep the folder, not your lab data)
 outputs/*
 !outputs/.gitkeep

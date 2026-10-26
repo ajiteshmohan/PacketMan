@@ -1,0 +1,6 @@
+/* Reset default Vite styles to allow App.jsx design system full control */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}

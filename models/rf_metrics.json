@@ -1,0 +1,101 @@
+{
+  "n_windows": 3000,
+  "n_runs": 25,
+  "cv": "5-fold, grouped by run",
+  "class_counts": {
+    "wireless_loss": 1862,
+    "normal": 906,
+    "congestion": 198,
+    "link_interruption": 34
+  },
+  "cv_accuracy": 0.984,
+  "rule_engine_accuracy": 0.9623333333333334,
+  "report": {
+    "normal": {
+      "precision": 0.9866962305986696,
+      "recall": 0.9823399558498896,
+      "f1-score": 0.9845132743362832,
+      "support": 906.0
+    },
+    "wireless_loss": {
+      "precision": 0.9871244635193133,
+      "recall": 0.9881847475832438,
+      "f1-score": 0.9876543209876543,
+      "support": 1862.0
+    },
+    "congestion": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 198.0
+    },
+    "link_interruption": {
+      "precision": 0.6666666666666666,
+      "recall": 0.7058823529411765,
+      "f1-score": 0.6857142857142857,
+      "support": 34.0
+    },
+    "accuracy": 0.984,
+    "macro avg": {
+      "precision": 0.9101218401961624,
+      "recall": 0.9191017640935775,
+      "f1-score": 0.9144704702595559,
+      "support": 3000.0
+    },
+    "weighted avg": {
+      "precision": 0.9842130675540076,
+      "recall": 0.984,
+      "f1-score": 0.9840985526473235,
+      "support": 3000.0
+    }
+  },
+  "labels": [
+    "normal",
+    "wireless_loss",
+    "congestion",
+    "link_interruption"
+  ],
+  "confusion_matrix": [
+    [
+      890,
+      14,
+      0,
+      2
+    ],
+    [
+      12,
+      1840,
+      0,
+      10
+    ],
+    [
+      0,
+      0,
+      198,
+      0
+    ],
+    [
+      0,
+      10,
+      0,
+      24
+    ]
+  ],
+  "feature_importance": {
+    "rto_backoff": 0.1743044108821009,
+    "throughput_kbps": 0.1699405175121324,
+    "rtt_ratio": 0.16678525173897193,
+    "krtt_ms": 0.13825574160535764,
+    "cwnd": 0.11179703551169913,
+    "ca_state": 0.067302622042926,
+    "retrans_delta": 0.0629627786136293,
+    "loss_est_pct": 0.055361660980260144,
+    "d_cwnd_ratio": 0.025449236394929253,
+    "d_tp_ratio": 0.014465976141496925,
+    "d_rtt_ratio": 0.013374768576496466
+  },
+  "params": {
+    "n_estimators": 200,
+    "max_depth": 15
+  }
+}

@@ -10,6 +10,7 @@ used to evaluate / train the error classifier.
   blackout     100% loss for a few seconds      (what a hand-off / deep fade looks like to TCP)
 """
 from dataclasses import dataclass
+from typing import List, Optional
 
 
 @dataclass(frozen=True)
@@ -40,8 +41,10 @@ SCENARIOS = {
     "loss1":      [_loss(1)],
     "loss5":      [_loss(5)],
     "loss10":     [_loss(10)],
-    # the example schedule from the project proposal: 1% -> 5% -> 10% -> 5% -> 1%
+    # Review 1 proposal: 1% -> 5% -> 10% -> 5% -> 1%
     "dynamic":    [_loss(1), _loss(5), _loss(10), _loss(5), _loss(1)],
+    # Review 2 proposal: 1% -> 5% -> 10% -> 2%
+    "dynamic2":   [_loss(1), _loss(5), _loss(10), _loss(2)],
     "congestion": [Phase("none", weight=2), Phase("congestion", delay_ms=20, rate_mbit=3.0,
                                                   limit_pkts=30, weight=3), Phase("none", weight=2)],
     "blackout":   [Phase("none", weight=3), Phase("blackout", weight=0.5), Phase("none", weight=3),
@@ -54,8 +57,19 @@ SCENARIOS = {
 }
 
 
+def register_custom_scenario(name: str, loss_sequence: List[float], weights: Optional[List[float]] = None):
+    """Dynamically register a custom sequence of packet losses."""
+    if weights is None:
+        weights = [1.0] * len(loss_sequence)
+    phases = [Phase("none", weight=w) if l <= 0 else _loss(l, w) for l, w in zip(loss_sequence, weights)]
+    SCENARIOS[name] = phases
+    return SCENARIOS[name]
+
+
 def phase_schedule(name: str, duration: float):
     """Return [(start_s, end_s, Phase), ...] covering [0, duration]."""
+    if name not in SCENARIOS:
+        raise KeyError(f"Scenario {name!r} not found in SCENARIOS ({list(SCENARIOS.keys())})")
     phases = SCENARIOS[name]
     total = sum(p.weight for p in phases)
     out, t = [], 0.0

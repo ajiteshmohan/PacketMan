@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 """Error detection and classification for TCP measurement windows (0.5 s each).
 
-Two layers
+Two layers:
   1. Rule engine (always on, explainable, no training): decides whether the window shows a
-     TCP error *symptom*, infers the *likely cause* from RTT / loss / stall signatures, and
-     reports which TCP *recovery mechanism* was active (read from the kernel CA state).
+     TCP error *symptom*, infers the *likely cause* from RTT / loss / stall signatures,
+     produces *evidence* and *recommended actions*, and reports which TCP *recovery mechanism*
+     was active (read from the kernel CA state).
   2. Random Forest (optional, learned): 200 trees, depth 15 - same inputs, trained on labelled
      windows (ground truth = the netem impairment that was injected). Evaluated with 5-fold
      cross-validation grouped by run so that windows from one run never leak into the test fold.
 
-What can and cannot be known from TCP statistics alone
+What can and cannot be known from TCP statistics alone:
   * random loss      vs  queue build-up/overflow  vs  total outage      -> separable (RTT and stall differ)
   * interference     vs  weak signal                                    -> NOT separable without RSSI
   * hand-off         vs  deep fade                                      -> NOT separable (both = outage)
 
+Usage:
     python classifier.py train --synthetic --model models/rf.joblib
     python classifier.py train --data "outputs/client_*.csv" --model models/rf.joblib
     python classifier.py predict --data "outputs/client_*.csv" --model models/rf.joblib --out outputs/classified.csv
@@ -27,10 +29,16 @@ import numpy as np
 import pandas as pd
 
 CLASSES = ["normal", "wireless_loss", "congestion", "link_interruption"]
-LABEL_MAP = {"none": "normal", "random_loss": "wireless_loss",
-             "congestion": "congestion", "blackout": "link_interruption"}
-FEATURES = ["loss_est_pct", "krtt_ms", "rtt_ratio", "throughput_kbps", "cwnd", "retrans_delta",
-            "rto_backoff", "ca_state", "d_cwnd_ratio", "d_rtt_ratio", "d_tp_ratio"]
+LABEL_MAP = {
+    "none": "normal",
+    "random_loss": "wireless_loss",
+    "congestion": "congestion",
+    "blackout": "link_interruption"
+}
+FEATURES = [
+    "loss_est_pct", "krtt_ms", "rtt_ratio", "throughput_kbps", "cwnd", "retrans_delta",
+    "rto_backoff", "ca_state", "d_cwnd_ratio", "d_rtt_ratio", "d_tp_ratio"
+]
 
 RTT_INFLATION = 2.0     # RTT >= 2x the run's minimum (and >= 10 ms above it) => queue building
 STALL_FRAC = 0.02       # throughput <= 2% of the run's 95th-percentile => stalled
@@ -60,7 +68,9 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
     d["rtt_base_ms"] = base
     d["rtt_ratio"] = (d["rtt_ms"] / base).fillna(1.0)
     d["run_peak_kbps"] = g["throughput_kbps"].transform(lambda s: s.quantile(0.95))
-    prev_cwnd, prev_rtt, prev_tp = g["cwnd"].shift(1), g["rtt_ms"].shift(1), g["throughput_kbps"].shift(1)
+    prev_cwnd = g["cwnd"].shift(1)
+    prev_rtt = g["rtt_ms"].shift(1)
+    prev_tp = g["throughput_kbps"].shift(1)
     d["d_cwnd_ratio"] = (d["cwnd"] / prev_cwnd.replace(0, np.nan)).fillna(1.0)
     d["d_rtt_ratio"] = (d["rtt_ms"] / prev_rtt.replace(0, np.nan)).fillna(1.0)
     d["d_tp_ratio"] = ((d["throughput_kbps"] + 1) / (prev_tp + 1)).fillna(1.0)
@@ -71,7 +81,9 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def rule_based(df: pd.DataFrame) -> pd.DataFrame:
-    """Annotate every window with: error_detected, symptom, likely_cause, cause_detail, tcp_response."""
+    """Annotate every window with error_detected, symptom, likely_cause, cause_detail,
+    evidence, recommended_action, tcp_response, and prediction_source.
+    """
     d = add_features(df)
     retrans = d["retrans_delta"] > 0
     timeouts = (d["rto_backoff"] >= 1) | (d["ca_state"] == 4)
@@ -82,13 +94,15 @@ def rule_based(df: pd.DataFrame) -> pd.DataFrame:
     # --- symptom: what is visibly going wrong at TCP level (highest priority first)
     d["symptom"] = np.select(
         [stalled, timeouts, retrans | (d["ca_state"] == 3), collapse, queue],
-        ["stall", "timeout_rto", "fast_retransmit", "cwnd_collapse", "rtt_inflation"], "none")
+        ["stall", "timeout_rto", "fast_retransmit", "cwnd_collapse", "rtt_inflation"], "none"
+    )
     d["error_detected"] = d["symptom"] != "none"
 
     # --- likely cause: loss-differentiation heuristic on RTT and delivery
     d["likely_cause"] = np.select(
         [stalled & (timeouts | retrans), queue, retrans | timeouts | collapse],
-        ["link_interruption", "congestion", "wireless_loss"], "normal")
+        ["link_interruption", "congestion", "wireless_loss"], "normal"
+    )
 
     rssi = d["rssi_dbm"] if "rssi_dbm" in d else pd.Series(np.nan, index=d.index)
     detail = np.select(
@@ -99,15 +113,62 @@ def rule_based(df: pd.DataFrame) -> pd.DataFrame:
          (d["likely_cause"] == "wireless_loss") & rssi.notna(),
          d["likely_cause"] == "wireless_loss"],
         ["handoff_or_deep_fade", "buffer_overflow", "queue_building", "weak_signal",
-         "interference", "interference_or_weak_signal"], "none")
+         "interference", "interference_or_weak_signal"], "none"
+    )
     d["cause_detail"] = detail
+
+    # --- evidence: scientific justification based on TCP signatures
+    evidence = np.select(
+        [
+            d["likely_cause"] == "link_interruption",
+            (d["likely_cause"] == "congestion") & retrans,
+            d["likely_cause"] == "congestion",
+            (d["likely_cause"] == "wireless_loss") & (detail == "weak_signal"),
+            (d["likely_cause"] == "wireless_loss") & (detail == "interference"),
+            d["likely_cause"] == "wireless_loss",
+        ],
+        [
+            "Throughput collapsed to <=2% of run peak with active RTO backoff; characteristic of channel fade or AP handoff.",
+            "RTT inflated >=2x baseline accompanied by retransmissions; queue overflow caused buffer drop-tail losses.",
+            "RTT inflated >=2x baseline without packet drops; queue buildup at bottleneck buffer.",
+            "Retransmissions occurred with flat RTT and low Wi-Fi RSSI (< -75 dBm); indicates weak wireless signal.",
+            "Retransmissions occurred with flat RTT while Wi-Fi RSSI is strong; indicates external RF interference.",
+            "Retransmissions occurred while RTT remained flat; characteristic of random wireless packet drop.",
+        ],
+        "Network metrics within normal operating limits (low RTT, healthy cwnd, zero retransmissions)."
+    )
+    d["evidence"] = evidence
+
+    # --- recommended action: actionable troubleshooting for lab / production
+    action = np.select(
+        [
+            d["likely_cause"] == "link_interruption",
+            (d["likely_cause"] == "congestion") & retrans,
+            d["likely_cause"] == "congestion",
+            (d["likely_cause"] == "wireless_loss") & (detail == "weak_signal"),
+            (d["likely_cause"] == "wireless_loss") & (detail == "interference"),
+            d["likely_cause"] == "wireless_loss",
+        ],
+        [
+            "Check AP roaming thresholds; verify physical obstacles or move closer to Wi-Fi access point.",
+            "Enable Active Queue Management (CoDel / FQ-CoDel) on bottleneck router; throttle sender rate.",
+            "Apply rate-limiting or traffic policing; avoid saturating link capacity.",
+            "Move client device closer to the wireless router or reorient antenna to increase signal strength.",
+            "Switch Wi-Fi channel (migrate from 2.4 GHz to 5 GHz or 6 GHz band to avoid co-channel interference).",
+            "Examine physical wireless environment for electromagnetic interference or weak signal.",
+        ],
+        "Maintain current operational parameters."
+    )
+    d["recommended_action"] = action
 
     # --- the TCP recovery mechanism, read from the kernel congestion-avoidance state
     in_slow_start = (d["ssthresh"].isna() | (d["cwnd"] < d["ssthresh"])) if "ssthresh" in d else False
     d["tcp_response"] = np.select(
         [timeouts, d["ca_state"] == 3, retrans, d["ca_state"] == 2, in_slow_start],
         ["rto_timeout_then_slow_start", "fast_recovery", "fast_retransmit", "cwr_backoff", "slow_start"],
-        "congestion_avoidance")
+        "congestion_avoidance"
+    )
+    d["prediction_source"] = "rule_engine"
     return d
 
 
@@ -162,6 +223,8 @@ def predict(bundle, df: pd.DataFrame) -> pd.DataFrame:
     proba = model.predict_proba(_xy(d))
     d["rf_cause"] = model.classes_[proba.argmax(1)]
     d["rf_confidence"] = proba.max(1)
+    d["prediction_source"] = "rules_and_random_forest"
+    d["models_agree"] = d["likely_cause"] == d["rf_cause"]
     return d
 
 
@@ -198,14 +261,14 @@ def main(argv=None):
             json.dump(m, fh, indent=2)
         print(f"[train] windows={m['n_windows']} runs={m['n_runs']} classes={m['class_counts']}")
         print(f"[train] {m['cv']}: accuracy {m['cv_accuracy']:.3f}   (rule engine alone: {m['rule_engine_accuracy']:.3f})")
-        print(f"[train] model -> {a.model}   metrics -> {a.metrics}")
-    else:
+        print(f"[train] model saved to {a.model}")
+    elif a.cmd == "predict":
         bundle = joblib.load(a.model)
-        out = predict(bundle, load_logs(a.data))
+        df = load_logs(a.data)
+        classified = predict(bundle, df)
         os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)
-        out.to_csv(a.out, index=False)
-        print(out.groupby("likely_cause").size().to_string())
-        print(f"-> {a.out}")
+        classified.to_csv(a.out, index=False)
+        print(f"[predict] processed {len(classified)} windows -> {a.out}")
 
 
 if __name__ == "__main__":
