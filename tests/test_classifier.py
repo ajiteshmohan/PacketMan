@@ -23,6 +23,8 @@ class TestClassifier(unittest.TestCase):
         self.assertIn("evidence", d.columns)
         self.assertIn("recommended_action", d.columns)
         self.assertIn("tcp_response", d.columns)
+        self.assertIn("confidence", d.columns)
+        self.assertIn("risk_level", d.columns)
         valid_causes = {"normal", "wireless_loss", "congestion", "link_interruption"}
         self.assertTrue(set(d["likely_cause"].unique()).issubset(valid_causes))
 
@@ -37,6 +39,8 @@ class TestClassifier(unittest.TestCase):
         self.assertIn("rf_confidence", classified.columns)
         self.assertIn("prediction_source", classified.columns)
         self.assertIn("models_agree", classified.columns)
+        self.assertIn("confidence", classified.columns)
+        self.assertTrue(((classified["confidence"] >= 0.0) & (classified["confidence"] <= 1.0)).all())
 
 
 if __name__ == "__main__":
