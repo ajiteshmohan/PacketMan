@@ -18,7 +18,12 @@ def build_args(iface: str, phase) -> list:
         args += ["delay", f"{phase.delay_ms}ms"]
         if phase.jitter_ms > 0:
             args.append(f"{phase.jitter_ms}ms")
-    if phase.loss_pct > 0:
+    if getattr(phase, "gemodel_p", 0.0) > 0 and getattr(phase, "gemodel_r", 0.0) > 0:
+        p_pct = phase.gemodel_p * 100.0
+        r_pct = phase.gemodel_r * 100.0
+        loss_bad = getattr(phase, "loss_bad", 30.0)
+        args += ["loss", "gemodel", f"{p_pct:g}%", f"{r_pct:g}%", f"{phase.loss:g}%", f"{loss_bad:g}%"]
+    elif phase.loss_pct > 0:
         args += ["loss", f"{phase.loss_pct:g}%"]
     if phase.rate_mbit > 0:
         args += ["rate", f"{phase.rate_mbit:g}mbit"]

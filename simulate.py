@@ -40,6 +40,7 @@ def simulate_run(scenario, run=1, duration=60.0, seed=0, link_mbps=20.0, base_rt
     t, cwnd, ssthresh = 0.0, 10.0, 1e9
     srtt, rttvar = base_rtt_ms / 1000, base_rtt_ms / 2000
     backoff, ca, total_retx = 0, 0, 0
+    markov_state = "good"
     next_b, bi = interval, 0
 
     while t < duration and bi < n_win:
@@ -55,7 +56,19 @@ def simulate_run(scenario, run=1, duration=60.0, seed=0, link_mbps=20.0, base_rt
         over = max(0, w - int(bdp + buf))                       # tail drops at the bottleneck
         queue = min(max(0.0, w - bdp), buf)
         rtt = base * (1 + abs(rng.normal(0, 0.06))) + queue / cap_pps
-        p = ph.loss_pct / 100
+        if ph.kind == "markov_loss":
+            p_gb = ph.gemodel_p if ph.gemodel_p > 0 else 0.10
+            p_bg = ph.gemodel_r if ph.gemodel_r > 0 else 0.40
+            if markov_state == "good":
+                if rng.random() < p_gb:
+                    markov_state = "bad"
+            else:
+                if rng.random() < p_bg:
+                    markov_state = "good"
+            p = (ph.loss_bad / 100.0) if markov_state == "bad" else (ph.loss / 100.0)
+        else:
+            markov_state = "good"
+            p = ph.loss_pct / 100
         n_rand = (w - over) if p >= 1 else (int(rng.binomial(w - over, p)) if p > 0 else 0)
         lost = min(w, over + n_rand)
         delivered = w - lost
@@ -122,7 +135,7 @@ def simulate_run(scenario, run=1, duration=60.0, seed=0, link_mbps=20.0, base_rt
 
 def generate_training(n_rows=3000, seed=1, duration=60.0, scenarios=None):
     """Simulated labelled data with randomised link parameters (different 'networks')."""
-    scenarios = scenarios or ["baseline", "loss1", "loss5", "loss10", "dynamic", "dynamic2", "congestion",
+    scenarios = scenarios or ["baseline", "loss1", "loss5", "loss10", "dynamic", "dynamic2", "gilbert_elliott", "congestion",
                               "blackout", "mixed"]
     rng = np.random.default_rng(seed)
     frames, total, i = [], 0, 0

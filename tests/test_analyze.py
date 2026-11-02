@@ -28,6 +28,9 @@ class TestAnalyze(unittest.TestCase):
         self.assertIn("mean_throughput_kbps", s.columns)
         self.assertIn("baseline", s.index)
         self.assertIn("loss1", s.index)
+        for col in ("jitter_ms", "rtt_p50_ms", "rtt_p90_ms", "rtt_p99_ms", "goodput_efficiency_pct"):
+            self.assertIn(col, s.columns)
+        self.assertTrue((s["goodput_efficiency_pct"] <= 100.0).all())
 
     def test_plot_generation(self):
         fig_dir = os.path.join(self.out, "figures")
