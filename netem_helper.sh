@@ -14,6 +14,10 @@ cmd="${1:-}"; iface="${2:-}"
 [[ $EUID -ne 0 ]] && { echo "Please run with sudo"; exit 1; }
 
 case "$cmd" in
+  gemodel)
+    p="${3:-10}"; r="${4:-40}"; loss_g="${5:-1}"; loss_b="${6:-35}"
+    tc qdisc replace dev "$iface" root netem loss gemodel "${p}%" "${r}%" "${loss_g}%" "${loss_b}%"
+    echo "applied: gemodel p=${p}% r=${r}% loss_good=${loss_g}% loss_bad=${loss_b}% on $iface" ;;
   apply)
     loss="${3:-0}"; delay="${4:-0}"
     args=(qdisc replace dev "$iface" root netem)

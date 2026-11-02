@@ -22,6 +22,9 @@ class Phase:
     rate_mbit: float = 0.0   # 0 = unlimited
     limit_pkts: int = 0      # netem queue limit, 0 = default
     weight: float = 1.0
+    gemodel_p: float = 0.0   # Gilbert-Elliott transition P(Good -> Bad)
+    gemodel_r: float = 0.0   # Gilbert-Elliott transition P(Bad -> Good)
+    loss_bad: float = 30.0   # Packet loss rate in Bad state (%)
 
     @property
     def loss_pct(self) -> float:
@@ -45,6 +48,10 @@ SCENARIOS = {
     "dynamic":    [_loss(1), _loss(5), _loss(10), _loss(5), _loss(1)],
     # Review 2 proposal: 1% -> 5% -> 10% -> 2%
     "dynamic2":   [_loss(1), _loss(5), _loss(10), _loss(2)],
+    # Gilbert-Elliott 2-state Markov burst loss model for Wi-Fi fading
+    "gilbert_elliott": [Phase("none", weight=1.5),
+                        Phase("markov_loss", loss=1.0, gemodel_p=0.10, gemodel_r=0.40, loss_bad=35.0, weight=3.0),
+                        Phase("none", weight=1.5)],
     "congestion": [Phase("none", weight=2), Phase("congestion", delay_ms=20, rate_mbit=3.0,
                                                   limit_pkts=30, weight=3), Phase("none", weight=2)],
     "blackout":   [Phase("none", weight=3), Phase("blackout", weight=0.5), Phase("none", weight=3),

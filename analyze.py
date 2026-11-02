@@ -34,8 +34,8 @@ import pandas as pd
 from classifier import CLASSES, load_logs, predict, rule_based
 from schema import save_rows_to_sqlite
 
-ORDER = ["baseline", "loss1", "loss5", "loss10", "dynamic", "dynamic2", "congestion", "blackout", "mixed"]
-SHADE = {"random_loss": "#f5a623", "congestion": "#4a90d9", "blackout": "#d0021b"}
+ORDER = ["baseline", "loss1", "loss5", "loss10", "dynamic", "dynamic2", "gilbert_elliott", "congestion", "blackout", "mixed"]
+SHADE = {"random_loss": "#f5a623", "markov_loss": "#f5a623", "congestion": "#4a90d9", "blackout": "#d0021b"}
 CAUSE_COLOR = {
     "normal": "#7bb77b",
     "wireless_loss": "#f5a623",

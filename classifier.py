@@ -32,6 +32,7 @@ CLASSES = ["normal", "wireless_loss", "congestion", "link_interruption"]
 LABEL_MAP = {
     "none": "normal",
     "random_loss": "wireless_loss",
+    "markov_loss": "wireless_loss",
     "congestion": "congestion",
     "blackout": "link_interruption"
 }
