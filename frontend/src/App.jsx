@@ -350,6 +350,7 @@ const SCENARIOS = [
   { id:"loss10", name:"Loss 10%", desc:"Constant 10% · frequent RTO timeouts", c:"#F97316", tp:6334, rtt:14.4, rtx:792, cwnd:75, loss:10, stalls:2 },
   { id:"dynamic", name:"Dynamic (R1)", desc:"1 → 5 → 10 → 5 → 1% cycle", c:C.violet, tp:7849, rtt:29.1, rtx:632, cwnd:78, loss:4.4, pattern:[1,5,10,5,1] },
   { id:"dynamic2", name:"Dynamic (R2)", desc:"1 → 5 → 10 → 2% pattern", c:"#A855F7", tp:7612, rtt:26.3, rtx:701, cwnd:74, loss:4.5, pattern:[1,5,10,2] },
+  { id:"gilbert_elliott", name:"Markov Fading", desc:"2-State Gilbert-Elliott burst loss", c:"#06B6D4", tp:7120, rtt:32.4, rtx:685, cwnd:69, loss:6.8, pattern:[1,35,1,35,1] },
   { id:"congestion", name:"Congestion", desc:"3 Mbps · 20 ms · 30-pkt queue", c:C.queue, tp:2874, rtt:118.4, rtx:164, cwnd:42, loss:1.8 },
   { id:"blackout", name:"Blackout", desc:"100% loss 3–5 s · AP handoff", c:C.down, tp:6120, rtt:41.7, rtx:211, cwnd:63, loss:12.1, stalls:1 },
   { id:"mixed", name:"Mixed", desc:"Multi-impairment AI training set", c:"#EC4899", tp:6905, rtt:38.2, rtx:548, cwnd:66, loss:5.2 },
@@ -368,6 +369,7 @@ function lossAt(s, t, dur){
 }
 function phaseName(s,t,dur){
   if (s.id==="baseline") return "clean_link";
+  if (s.id==="gilbert_elliott") return t % 8 < 3 ? "fading_dip" : "clear_channel";
   if (s.id==="congestion") return "bottleneck_queue";
   if (s.id==="blackout") return t>=12&&t<16 ? "link_blackout" : "stable";
   return "random_loss";
@@ -405,7 +407,7 @@ const MEASURED = [ {p:0.5,m:10001,sd:110},{p:1,m:10001,sd:180},{p:2,m:9620,sd:42
 const MATHIS_DATA = MATHIS_CURVE.map(d => { const m = MEASURED.find(x=>x.p===d.p); return { ...d, measured:m?.m, err:m?[m.sd,m.sd]:undefined }; });
 const LOSS_RTX = [0,0.5,1,2,3,5,7,10,12,15].map(p=>({ p, rtx:Math.round(2+ 9.2*Math.pow(p,1.9)+p*18) }));
 const LOSS_RTT = [0,1,2,3,5,7,10,12,15].map(p=>({ p, wireless:+(17.9 - p*0.22 + (p%3)*0.4).toFixed(1), congestion:+(17.9 + Math.pow(p,1.6)*6.8).toFixed(1) }));
-const COMPARE = ["baseline","loss1","loss5","loss10","dynamic","congestion"].map(id=>{const s=SC[id];return {name:s.name, tp:s.tp/1000, rtt:s.rtt, rtx:s.rtx, loss:s.loss}});
+const COMPARE = ["baseline","loss1","loss5","loss10","dynamic","gilbert_elliott","congestion"].map(id=>{const s=SC[id]||SC["baseline"];return {name:s.name, tp:s.tp/1000, rtt:s.rtt, rtx:s.rtx, loss:s.loss}});
 
 const CLASSES = ["normal","wireless_loss","congestion","link_interruption"];
 const CLS_C = { normal:C.ok, wireless_loss:C.loss, congestion:C.queue, link_interruption:C.down };
@@ -1160,7 +1162,7 @@ function DataPage({ toast }){
   const rows = useMemo(()=>DB_ROWS.filter(r=>(scen==="all"||r.scenario===scen)&&(run==="all"||r.run===+run)&&r.t>=tMin&&r.t<=tMax),[scen,run,tMin,tMax]);
   useEffect(()=>setPage(0),[scen,run,tMin,tMax]);
   const PS=15, pages=Math.max(1,Math.ceil(rows.length/PS)); const cols=Object.keys(DB_ROWS[0]);
-  const summary = ["baseline","loss1","loss5","loss10","dynamic","dynamic2","congestion","blackout","mixed"].map(id=>{const s=SC[id];return {scenario:id,mean_tp_kbps:s.tp,mean_rtt_ms:s.rtt,total_retrans:s.rtx,steady_cwnd:s.cwnd,target_loss_pct:s.loss,stalls:s.stalls||0}});
+  const summary = ["baseline","loss1","loss5","loss10","dynamic","dynamic2","gilbert_elliott","congestion","blackout","mixed"].map(id=>{const s=SC[id]||SC["baseline"];return {scenario:id,mean_tp_kbps:s.tp,mean_rtt_ms:s.rtt,total_retrans:s.rtx,steady_cwnd:s.cwnd,target_loss_pct:s.loss,stalls:s.stalls||0}});
   const exports=[
     ["Complete Error Report","error_report.csv · "+DIAG.length+" rows",C.down,()=>downloadFile("error_report.csv",toCSV(DIAG))],
     ["Scenario Summary Table","scenario_summary.csv · 9 rows",C.tp,()=>downloadFile("scenario_summary.csv",toCSV(summary))],
@@ -1180,7 +1182,7 @@ function DataPage({ toast }){
       </div>
       <Card className="mt" eyebrow="Database Browser" title={<>experiments <span className="tag" style={{"--c":C.ok}}>{fmt(rows.length)} rows</span></>}>
         <div className="toolbar">
-          <div className="field" style={{width:180}}><label>Scenario</label><select className="select" value={scen} onChange={e=>setScen(e.target.value)}><option value="all">All</option>{["baseline","loss1","loss5","loss10","dynamic"].map(s=> <option key={s}>{s}</option>)}</select></div>
+          <div className="field" style={{width:180}}><label>Scenario</label><select className="select" value={scen} onChange={e=>setScen(e.target.value)}><option value="all">All</option>{["baseline","loss1","loss5","loss10","dynamic","gilbert_elliott"].map(s=> <option key={s}>{s}</option>)}</select></div>
           <div className="field" style={{width:130}}><label>Run #</label><select className="select" value={run} onChange={e=>setRun(e.target.value)}><option value="all">All</option>{[1,2,3].map(r=> <option key={r}>{r}</option>)}</select></div>
           <div className="field" style={{width:110}}><label>t from (s)</label><input className="input" type="number" min={0} max={tMax} value={tMin} onChange={e=>setTMin(+e.target.value)}/></div>
           <div className="field" style={{width:110}}><label>t to (s)</label><input className="input" type="number" min={tMin} max={30} value={tMax} onChange={e=>setTMax(+e.target.value)}/></div>
