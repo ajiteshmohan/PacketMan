@@ -169,6 +169,34 @@ def rule_based(df: pd.DataFrame) -> pd.DataFrame:
         ["rto_timeout_then_slow_start", "fast_recovery", "fast_retransmit", "cwr_backoff", "slow_start"],
         "congestion_avoidance"
     )
+    # --- explainable confidence and risk level assessment
+    conf = np.select(
+        [
+            d["likely_cause"] == "link_interruption",
+            (d["likely_cause"] == "congestion") & retrans,
+            d["likely_cause"] == "congestion",
+            (d["likely_cause"] == "wireless_loss") & rssi.notna(),
+            d["likely_cause"] == "wireless_loss",
+        ],
+        [0.95, 0.90, 0.85, 0.92, 0.82],
+        0.98
+    )
+    d["rule_confidence"] = conf
+    d["confidence"] = conf
+
+    risk = np.select(
+        [
+            d["likely_cause"] == "link_interruption",
+            (d["likely_cause"] == "congestion") & retrans,
+            d["likely_cause"] == "congestion",
+            (d["likely_cause"] == "wireless_loss") & (d["retrans_delta"] >= 5),
+            d["likely_cause"] == "wireless_loss",
+        ],
+        ["CRITICAL", "CRITICAL", "MODERATE", "MODERATE", "LOW"],
+        "NORMAL"
+    )
+    d["risk_level"] = risk
+
     d["prediction_source"] = "rule_engine"
     return d
 
@@ -226,6 +254,11 @@ def predict(bundle, df: pd.DataFrame) -> pd.DataFrame:
     d["rf_confidence"] = proba.max(1)
     d["prediction_source"] = "rules_and_random_forest"
     d["models_agree"] = d["likely_cause"] == d["rf_cause"]
+    d["confidence"] = np.where(
+        d["models_agree"],
+        np.maximum(d["rf_confidence"], d["rule_confidence"]),
+        (d["rf_confidence"] + d["rule_confidence"]) / 2.0
+    ).round(2)
     return d
 
 

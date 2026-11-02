@@ -351,6 +351,8 @@ def error_report(d):
         "symptom": e.symptom,
         "likely_cause": e.likely_cause,
         "cause_detail": e.cause_detail,
+        "confidence": e["confidence"].round(2) if "confidence" in e else 0.85,
+        "risk_level": e["risk_level"] if "risk_level" in e else "MODERATE",
         "evidence": e.evidence if "evidence" in e else "",
         "recommended_action": e.recommended_action if "recommended_action" in e else "",
         "tcp_response": e.tcp_response
