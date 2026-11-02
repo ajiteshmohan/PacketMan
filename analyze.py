@@ -141,11 +141,30 @@ def dynamic_timeline(df, path, scen="dynamic"):
 
 def summary_table(df):
     g = df.groupby("scenario")
+    rtt_col = "krtt_ms" if "krtt_ms" in df and df["krtt_ms"].notna().any() else "app_rtt_ms"
+
+    # Statistical RTT jitter per scenario (RFC 3550 inter-arrival proxy)
+    def _calc_jitter(data, col):
+        out = {}
+        for scen, grp in data.groupby("scenario"):
+            vals = grp[col].dropna()
+            out[scen] = float(np.mean(np.abs(np.diff(vals.to_numpy())))) if len(vals) >= 2 else 0.0
+        return pd.Series(out)
+
+    mean_tp = g["throughput_kbps"].mean()
+    mean_gp = g["goodput_kbps"].mean() if "goodput_kbps" in df else np.nan
+    efficiency = ((mean_gp / mean_tp.replace(0, np.nan)) * 100.0).clip(upper=100.0)
+
     s = pd.DataFrame({
-        "mean_throughput_kbps": g["throughput_kbps"].mean(),
-        "mean_goodput_kbps": g["goodput_kbps"].mean() if "goodput_kbps" in df else np.nan,
+        "mean_throughput_kbps": mean_tp,
+        "mean_goodput_kbps": mean_gp,
+        "goodput_efficiency_pct": efficiency,
         "mean_delivery_kbps": g["delivery_kbps"].mean() if "delivery_kbps" in df else np.nan,
         "mean_krtt_ms": g["krtt_ms"].mean() if "krtt_ms" in df else np.nan,
+        "rtt_p50_ms": g[rtt_col].quantile(0.50) if rtt_col in df else np.nan,
+        "rtt_p90_ms": g[rtt_col].quantile(0.90) if rtt_col in df else np.nan,
+        "rtt_p99_ms": g[rtt_col].quantile(0.99) if rtt_col in df else np.nan,
+        "jitter_ms": _calc_jitter(df, rtt_col),
         "p95_app_rtt_ms": g["app_rtt_ms"].quantile(0.95) if "app_rtt_ms" in df else np.nan,
         "mean_cwnd": g["cwnd"].mean() if "cwnd" in df else np.nan,
         "total_retransmits": g["retrans_delta"].sum() if "retrans_delta" in df else 0,
@@ -380,6 +399,8 @@ def main(argv=None):
     dynamic_timeline(df, out / "dynamic_timeline.png")
     s = summary_table(df)
     s.to_csv(out / "summary.csv")
+    with open(out / "metrics_summary.json", "w", encoding="utf-8") as fh:
+        json.dump({"scenarios": s.reset_index().to_dict(orient="records")}, fh, indent=2)
     summary_plot(s, out / "summary.png")
     throughput_vs_loss(df, out / "throughput_vs_loss.png")
     loss_vs_retransmissions(df, out / "loss_vs_retrans.png")
